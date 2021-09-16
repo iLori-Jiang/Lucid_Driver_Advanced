@@ -49,11 +49,25 @@
 #define TIMEOUT 10000
 
 // pixel format
-#define PIXEL_FORMAT BGR8
+#define COLOR_PIXEL_FORMAT BGR8
+#define DEPTH_PIXEL_FORMAT "Coord3D_ABCY16"
+
+// scale and offset of the image
+#define SCALE 0.25f
+#define OFFSET 0.00f
 
 // =-=-=-=-=-=-=-=-=-
 // =-=- EXAMPLE -=-=-
 // =-=-=-=-=-=-=-=-=-
+
+// store x, y, z data in mm and intensity for a given point
+struct PointData
+{
+	int16_t x;
+	int16_t y;
+	int16_t z;
+	int16_t intensity;
+};
 
 void SaveDepthImage(Arena::IImage *pImage, const char *filename)
 {
@@ -90,10 +104,10 @@ void SaveDepthImage(Arena::IImage *pImage, const char *filename)
 
 	// set default parameters for SetPly()
 	bool filterPoints = true;
-	float scale = 0.25f;
-	float offsetA = 0.0f;
-	float offsetB = 0.0f;
-	float offsetC = 0.0f;
+	float scale = SCALE;
+	float offsetA = OFFSET;
+	float offsetB = OFFSET;
+	float offsetC = OFFSET;
 
 	// set the output file format of the image writer to .ply
 	writer.SetPly(".ply", filterPoints, isSignedPixelFormat, scale, offsetA, offsetB, offsetC);
@@ -108,17 +122,155 @@ void SaveDepthImage(Arena::IImage *pImage, const char *filename)
 	writer << pImage->GetData();
 }
 
+void SaveIntensityImage(Arena::IImage *pImage, const char *filename)
+{
+	// prepare info from input buffer
+	size_t width = pImage->GetWidth();
+	size_t height = pImage->GetHeight();
+	size_t size = width * height;
+	size_t srcBpp = pImage->GetBitsPerPixel();
+	size_t srcPixelSize = srcBpp / 8;
+	const uint8_t* pInput = pImage->GetData();
+	const uint8_t* pIn = pInput;
+
+	// minDepth z value is set to 32767 to guarantee closer points exist as this
+	// is the largest value possible
+	PointData minDepth = { 0, 0, 32767, 0 };
+	PointData maxDepth = { 0, 0, 0, 0 };
+
+	// find points with min and max z values
+	std::cout << TAB2 << "Find points with min and max z values\n";
+
+	// using strcmp to avoid conversion issue
+	int compareResult_ABCY16s = strcmp(DEPTH_PIXEL_FORMAT, "Coord3D_ABCY16s"); // if they are equal compareResult_ABCY16s = 0
+	int compareResult_ABCY16 = strcmp(DEPTH_PIXEL_FORMAT, "Coord3D_ABCY16");	 // if they are equal compareResult_ABCY16 = 0
+
+	bool isSignedPixelFormat = false;
+
+	// if PIXEL_FORMAT is equal to Coord3D_ABCY16s
+	if (compareResult_ABCY16s == 0)
+	{
+		isSignedPixelFormat = true;
+
+		for (size_t i = 0; i < size; i++)
+		{
+			// Extract point data to signed 16 bit integer
+			//    The first channel is the x coordinate, second channel is the y
+			//    coordinate, the third channel is the z coordinate and the
+			//    fourth channel is intensity. We offset pIn by 2 for each
+			//    channel because pIn is an 8 bit integer and we want to read it
+			//    as a 16 bit integer.
+			int16_t x = *reinterpret_cast<const int16_t*>(pIn);
+			int16_t y = *reinterpret_cast<const int16_t*>((pIn + 2));
+			int16_t z = *reinterpret_cast<const int16_t*>((pIn + 4));
+			int16_t intensity = *reinterpret_cast<const int16_t*>((pIn + 6));
+
+			// convert x, y and z values to mm using their coordinate scales
+			x = int16_t(double(x) * SCALE);
+			y = int16_t(double(y) * SCALE);
+			z = int16_t(double(z) * SCALE);
+
+			if (z < minDepth.z && z > 0)
+			{
+				minDepth.x = x;
+				minDepth.y = y;
+				minDepth.z = z;
+				minDepth.intensity = intensity;
+			}
+			else if (z > maxDepth.z)
+			{
+				maxDepth.x = x;
+				maxDepth.y = y;
+				maxDepth.z = z;
+				maxDepth.intensity = intensity;
+			}
+
+			pIn += srcPixelSize;
+		}
+
+		// display data
+		std::cout << TAB3 << "Minimum depth point found with z distance of " << minDepth.z
+				<< "mm and intensity " << minDepth.intensity << " at coordinates (" << minDepth.x
+				<< "mm, " << minDepth.y << "mm)" << std::endl;
+
+		std::cout << TAB3 << "Maximum depth point found with z distance of " << maxDepth.z
+				<< "mm and intensity " << maxDepth.intensity << " at coordinates (" << maxDepth.x
+				<< "mm, " << maxDepth.y << "mm)" << std::endl;
+	}
+	// if PIXEL_FORMAT is equal to Coord3D_ABCY16
+	else if (compareResult_ABCY16 == 0)
+	{
+		for (size_t i = 0; i < size; i++)
+		{
+			// Extract point data to signed 16 bit integer
+			//    The first channel is the x coordinate, second channel is the y
+			//    coordinate, the third channel is the z coordinate and the
+			//    fourth channel is intensity. We offset pIn by 2 for each
+			//    channel because pIn is an 8 bit integer and we want to read it
+			//    as a 16 bit integer.
+			uint16_t x = *reinterpret_cast<const uint16_t*>(pIn);
+			uint16_t y = *reinterpret_cast<const uint16_t*>((pIn + 2));
+			uint16_t z = *reinterpret_cast<const uint16_t*>((pIn + 4));
+			uint16_t intensity = *reinterpret_cast<const uint16_t*>((pIn + 6));
+
+			// if z is less than max value, as invalid values get filtered to
+			// 65535
+			if (z < 65535)
+			{
+				// Convert x, y and z to millimeters
+				//    Using each coordinates' appropriate scales, convert x, y
+				//    and z values to mm. For the x and y coordinates in an
+				//    unsigned pixel format, we must then add the offset to our
+				//    converted values in order to get the correct position in
+				//    millimeters.
+				x = uint16_t(double(x) * SCALE + OFFSET);
+				y = uint16_t((double(y) * SCALE) + OFFSET);
+				z = uint16_t(double(z) * SCALE);
+
+				if (z < minDepth.z && z > 0)
+				{
+					minDepth.x = x;
+					minDepth.y = y;
+					minDepth.z = z;
+					minDepth.intensity = intensity;
+				}
+				else if (z > maxDepth.z)
+				{
+					maxDepth.x = x;
+					maxDepth.y = y;
+					maxDepth.z = z;
+					maxDepth.intensity = intensity;
+				}
+			}
+
+			pIn += srcPixelSize;
+		}
+
+		// display data
+		std::cout << TAB3 << "Minimum depth point found with z distance of " << minDepth.z
+				<< "mm and intensity " << minDepth.intensity << " at coordinates (" << minDepth.x
+				<< "mm, " << minDepth.y << "mm)" << std::endl;
+
+		std::cout << TAB3 << "Maximum depth point found with z distance of " << maxDepth.z
+				<< "mm and intensity " << maxDepth.intensity << " at coordinates (" << maxDepth.x
+				<< "mm, " << maxDepth.y << "mm)" << std::endl;
+	}
+	else
+	{
+		std::cout << "This example requires the camera to be in either 3D image format Coord3D_ABCY16 or Coord3D_ABCY16s\n\n";
+	}
+
+}
+
 void SaveColorImage(Arena::IImage *pImage, const char *filename)
 {
 	// Convert image
 	//    Convert the image to a displayable pixel format. It is worth keeping in
 	//    mind the best pixel and file formats for your application. This example
 	//    converts the image so that it is displayable by the operating system.
-	std::cout << TAB1 << "Convert image to " << GetPixelFormatName(PIXEL_FORMAT) << "\n";
+	std::cout << TAB1 << "Convert image to " << GetPixelFormatName(COLOR_PIXEL_FORMAT) << "\n";
 
-	auto pConverted = Arena::ImageFactory::Convert(
-		pImage,
-		PIXEL_FORMAT);
+	auto pConverted = Arena::ImageFactory::Convert(pImage, COLOR_PIXEL_FORMAT);
 
 	// Prepare image parameters
 	//    An image's width, height, and bits per pixel are required to save to
@@ -176,7 +328,39 @@ void ConfigureTriggerAndAcquireImage(Arena::IDevice *pDevice, std::string device
 
 	if (deviceType == "depth")
 	{
+    GenApi::INodeMap* pNodeMap = pDevice->GetNodeMap();
+
+    // validate if Scan3dCoordinateSelector node exists. If not - probaly not
+	  // Helios camera used running the example
+    GenApi::CEnumerationPtr checkpCoordSelector = pNodeMap->GetNode("Scan3dCoordinateSelector");
+	  if (!checkpCoordSelector)
+	  {
+		  std::cout << TAB1 << "Scan3dCoordinateSelector node is not found. Please make sure that Helios device is used for the example.\n";
+		  return;
+	  }
+
+    // validate if Scan3dCoordinateOffset node exists. If not - probaly Helios
+	  // has an old firmware
+	  GenApi::CFloatPtr checkpCoord = pNodeMap->GetNode("Scan3dCoordinateOffset");
+	  if (!checkpCoord)
+	  {
+		  std::cout << TAB1 << "Scan3dCoordinateOffset node is not found. Please update Helios firmware.\n";
+		  return;
+	  }
+
+    // get node values that will be changed in order to return their values at the end of the example
+	  GenICam::gcstring pixelFormatInitial = Arena::GetNodeValue<GenICam::gcstring>(pNodeMap, "PixelFormat");
 		GenICam::gcstring operatingModeInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "Scan3dOperatingMode");
+    
+		// Set pixel format
+		// Warning: HLT003S-001 / Helios2 - has only Coord3D_ABCY16 in this case
+		//    This example demonstrates data interpretation for both a signed or
+		//    unsigned pixel format. Default PIXEL_FORMAT here is set to
+		//    Coord3D_ABCY16 but this can be modified to be a signed pixel format
+		//    by changing it to Coord3D_ABCY16s.
+		std::cout << TAB1 << "Set " << DEPTH_PIXEL_FORMAT << " to pixel format\n";
+		Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "PixelFormat", DEPTH_PIXEL_FORMAT);
+
 		Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "Scan3dOperatingMode", "Distance5000mmMultiFreq");
 	}
 	// Set trigger selector
@@ -214,11 +398,12 @@ void ConfigureTriggerAndAcquireImage(Arena::IDevice *pDevice, std::string device
 	
 	if (deviceType == "depth")
 	{
-		Arena::SetNodeValue<int64_t>(
-				pDevice->GetNodeMap(),
-				"Scan3dImageAccumulation",
-				4);
+		Arena::SetNodeValue<int64_t>(pDevice->GetNodeMap(), "Scan3dImageAccumulation", 4);
 	}
+
+	// Set auto exposure
+	GenICam::gcstring exposureAutoInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "ExposureAuto");
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "ExposureAuto", "On");
 
 	// enable stream auto negotiate packet size
 	Arena::SetNodeValue<bool>(
@@ -243,7 +428,9 @@ void ConfigureTriggerAndAcquireImage(Arena::IDevice *pDevice, std::string device
 
 	int num = 0;
 	while (true)
-	{
+	{	
+		std::cout << "Press enter to get next image\n";
+		std::getchar();
 		// Trigger Armed
 		//    Continually check until trigger is armed. Once the trigger is armed, it
 		//    is ready to be executed.
@@ -283,6 +470,7 @@ void ConfigureTriggerAndAcquireImage(Arena::IDevice *pDevice, std::string device
 				std::string file_name = "Captured_Images/Depth_Images/" + std::to_string(num++) + ".ply";
 				std::cout << "save " << file_name << "\n";
 				SaveDepthImage(pImage, file_name.c_str());
+				SaveIntensityImage(pImage, file_name.c_str());
 			}
 			else
 			{
@@ -300,8 +488,6 @@ void ConfigureTriggerAndAcquireImage(Arena::IDevice *pDevice, std::string device
 
 		pDevice->RequeueBuffer(pImage);
 
-		std::cout << "Press enter to get next image\n";
-		std::getchar();
 	}
 
 	// Stop the stream
@@ -313,7 +499,9 @@ void ConfigureTriggerAndAcquireImage(Arena::IDevice *pDevice, std::string device
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "TriggerSource", triggerSourceInitial);
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "TriggerMode", triggerModeInitial);
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "TriggerSelector", triggerSelectorInitial);
-
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "ExposureAuto", exposureAutoInitial);
+	Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "Scan3dOperatingMode", operatingModeInitial);
+	Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "PixelFormat", pixelFormatInitial);
 }
 
 // =-=-=-=-=-=-=-=-=-
@@ -346,14 +534,18 @@ int main()
 			std::getchar();
 			return 0;
 		}
-		GenICam::gcstring macAddress = deviceInfos[lucidList[1]].MacAddressStr();
+		uint8_t index = 0;
+		GenICam::gcstring macAddress = deviceInfos[lucidList[index]].MacAddressStr();
 		std::cout << "Current selected device is: "<< macAddress << std::endl;
-		Arena::IDevice *pDevice = pSystem->CreateDevice(deviceInfos[lucidList[1]]);
+		Arena::IDevice *pDevice = pSystem->CreateDevice(deviceInfos[lucidList[index]]);
 
 		// assign camera type
 		std::string deviceType = "";
-		if (macAddress == "1c:0f:af:00:46:6f"){deviceType = "depth";}
-		else if (macAddress == "1c:0f:af:0c:85:61"){deviceType = "color";}
+    GenICam::gcstring deviceModelName = Arena::GetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "DeviceModelName");
+	  std::string deviceModelName_tmp = deviceModelName.c_str();
+		if (deviceModelName_tmp.rfind("HLT", 0) == 0){deviceType = "depth";}
+		else if (deviceModelName_tmp.rfind("PHX", 0) == 0){deviceType = "color";}
+    std::cout << "Current selected device type is: "<< deviceType << std::endl;
 
 		// run example
 		std::cout << "Start shooting...\n\n";
