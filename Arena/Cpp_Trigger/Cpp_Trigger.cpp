@@ -33,7 +33,7 @@
 
 #define TAB1 "  "
 #define TAB2 "    "
-#define TAB3 "      "
+#define TAB3 "        "
 
 // Trigger: Introduction
 //    This example introduces basic trigger configuration and use. In order to
@@ -49,8 +49,9 @@
 #define TIMEOUT 10000
 
 // pixel format
-#define COLOR_PIXEL_FORMAT BGR8
+#define COLOR_PIXEL_FORMAT "BGR8"
 #define DEPTH_PIXEL_FORMAT "Coord3D_ABCY16"
+#define INTENSITY_PIXEL_FORMAT "Mono8"
 
 // scale and offset of the image
 #define SCALE 0.25f
@@ -83,7 +84,7 @@ void SaveDepthImage(Arena::IImage *pImage, const char *filename)
 	//    disk. Its size and stride (i.e. pitch) can be calculated from those 3
 	//    inputs. Notice that an image's size and stride use bytes as a unit
 	//    while the bits per pixel uses bits.
-	std::cout << TAB1 << "Prepare image parameters\n";
+	std::cout << TAB3 << "Prepare image parameters\n";
 
 	Save::ImageParams params(
 			pImage->GetWidth(),
@@ -96,7 +97,7 @@ void SaveDepthImage(Arena::IImage *pImage, const char *filename)
 	//    save. Providing these should result in a successfully saved file on the
 	//    disk. Because an image's parameters and file name pattern may repeat,
 	//    they can be passed into the image writer's constructor.
-	std::cout << TAB1 << "Prepare image writer\n";
+	std::cout << TAB3 << "Prepare image writer\n";
 
 	Save::ImageWriter writer(
 			params,
@@ -117,12 +118,12 @@ void SaveDepthImage(Arena::IImage *pImage, const char *filename)
 	//    operator (<<) triggers a save. Notice that the << operator accepts the
 	//    image data as a constant unsigned 8-bit integer pointer (const
 	//    uint8_t*) and the file name as a character string (const char*).
-	std::cout << TAB1 << "Save image\n";
+	std::cout << TAB3 << "Save image\n";
 
 	writer << pImage->GetData();
 }
 
-void SaveIntensityImage(Arena::IImage *pImage, const char *filename)
+void Depth2IntensityImage(Arena::IImage *pImage, const char *filename)
 {
 	// prepare info from input buffer
 	size_t width = pImage->GetWidth();
@@ -139,7 +140,7 @@ void SaveIntensityImage(Arena::IImage *pImage, const char *filename)
 	PointData maxDepth = { 0, 0, 0, 0 };
 
 	// find points with min and max z values
-	std::cout << TAB2 << "Find points with min and max z values\n";
+	std::cout << TAB3 << "Find points with min and max z values\n";
 
 	// using strcmp to avoid conversion issue
 	int compareResult_ABCY16s = strcmp(DEPTH_PIXEL_FORMAT, "Coord3D_ABCY16s"); // if they are equal compareResult_ABCY16s = 0
@@ -268,16 +269,16 @@ void SaveColorImage(Arena::IImage *pImage, const char *filename)
 	//    Convert the image to a displayable pixel format. It is worth keeping in
 	//    mind the best pixel and file formats for your application. This example
 	//    converts the image so that it is displayable by the operating system.
-	std::cout << TAB1 << "Convert image to " << GetPixelFormatName(COLOR_PIXEL_FORMAT) << "\n";
+	std::cout << TAB3 << "Convert image to " << GetPixelFormatName(BGR8) << "\n";
 
-	auto pConverted = Arena::ImageFactory::Convert(pImage, COLOR_PIXEL_FORMAT);
+	auto pConverted = Arena::ImageFactory::Convert(pImage, BGR8);
 
 	// Prepare image parameters
 	//    An image's width, height, and bits per pixel are required to save to
 	//    disk. Its size and stride (i.e. pitch) can be calculated from those 3
 	//    inputs. Notice that an image's size and stride use bytes as a unit
 	//    while the bits per pixel uses bits.
-	std::cout << TAB1 << "Prepare image parameters\n";
+	std::cout << TAB3 << "Prepare image parameters\n";
 
 	Save::ImageParams params(
 		pConverted->GetWidth(),
@@ -290,7 +291,7 @@ void SaveColorImage(Arena::IImage *pImage, const char *filename)
 	//    save. Providing these should result in a successfully saved file on the
 	//    disk. Because an image's parameters and file name pattern may repeat,
 	//    they can be passed into the image writer's constructor.
-	std::cout << TAB1 << "Prepare image writer\n";
+	std::cout << TAB3 << "Prepare image writer\n";
 
 	Save::ImageWriter writer(
 		params,
@@ -301,7 +302,7 @@ void SaveColorImage(Arena::IImage *pImage, const char *filename)
 	//    operator (<<) triggers a save. Notice that the << operator accepts the
 	//    image data as a constant unsigned 8-bit integer pointer (const
 	//    uint8_t*) and the file name as a character string (const char*).
-	std::cout << TAB1 << "Save image\n";
+	std::cout << TAB3 << "Save image\n";
 
 	writer << pConverted->GetData();
 
@@ -309,60 +310,83 @@ void SaveColorImage(Arena::IImage *pImage, const char *filename)
 	Arena::ImageFactory::Destroy(pConverted);
 }
 
-// demonstrates basic trigger configuration and use
-// (1) sets trigger mode, source, and selector
-// (2) starts stream
-// (3) waits until trigger is armed
-// (4) triggers image
-// (5) gets image
-// (6) requeues buffer
-// (7) stops stream
-void ConfigureTriggerAndAcquireImage(Arena::IDevice *pDevice, std::string deviceType)
+void SaveIntensityImage(Arena::IImage *pImage, const char *filename)
 {
+	// Prepare image parameters
+	//    An image's width, height, and bits per pixel are required to save to
+	//    disk. Its size and stride (i.e. pitch) can be calculated from those 3
+	//    inputs. Notice that an image's size and stride use bytes as a unit
+	//    while the bits per pixel uses bits.
+	std::cout << TAB3 << "Prepare image parameters\n";
 
+	Save::ImageParams params(
+			pImage->GetWidth(),
+			pImage->GetHeight(),
+			pImage->GetBitsPerPixel());
+
+	// Prepare image writer
+	//    The image writer requires 3 arguments to save an image: the image's
+	//    parameters, a specified file name or pattern, and the image data to
+	//    save. Providing these should result in a successfully saved file on the
+	//    disk. Because an image's parameters and file name pattern may repeat,
+	//    they can be passed into the image writer's constructor.
+	std::cout << TAB3 << "Prepare image writer\n";
+
+	Save::ImageWriter writer(
+			params,
+			filename);
+
+	// Save image
+	//    Passing image data into the image writer using the cascading I/O
+	//    operator (<<) triggers a save. Notice that the << operator accepts the
+	//    image data as a constant unsigned 8-bit integer pointer (const
+	//    uint8_t*) and the file name as a character string (const char*).
+	std::cout << TAB3 << "Save image\n";
+
+	writer << pImage->GetData();
+}
+
+void ConfigureDepthCamera(Arena::IDevice *pDevice, GenICam::gcstring pixelFormat)
+{
 	// get node values that will be changed in order to return their values at
 	// the end of the example
 	GenICam::gcstring triggerSelectorInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "TriggerSelector");
 	GenICam::gcstring triggerModeInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "TriggerMode");
 	GenICam::gcstring triggerSourceInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "TriggerSource");
+	GenICam::gcstring pixelFormatInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "PixelFormat");;
 
-	if (deviceType == "depth")
+	// validate if Scan3dCoordinateSelector node exists. If not - probaly not
+	// Helios camera used running the example
+	GenApi::CEnumerationPtr checkpCoordSelector = pDevice->GetNodeMap()->GetNode("Scan3dCoordinateSelector");
+	if (!checkpCoordSelector)
 	{
-    GenApi::INodeMap* pNodeMap = pDevice->GetNodeMap();
-
-    // validate if Scan3dCoordinateSelector node exists. If not - probaly not
-	  // Helios camera used running the example
-    GenApi::CEnumerationPtr checkpCoordSelector = pNodeMap->GetNode("Scan3dCoordinateSelector");
-	  if (!checkpCoordSelector)
-	  {
-		  std::cout << TAB1 << "Scan3dCoordinateSelector node is not found. Please make sure that Helios device is used for the example.\n";
-		  return;
-	  }
-
-    // validate if Scan3dCoordinateOffset node exists. If not - probaly Helios
-	  // has an old firmware
-	  GenApi::CFloatPtr checkpCoord = pNodeMap->GetNode("Scan3dCoordinateOffset");
-	  if (!checkpCoord)
-	  {
-		  std::cout << TAB1 << "Scan3dCoordinateOffset node is not found. Please update Helios firmware.\n";
-		  return;
-	  }
-
-    // get node values that will be changed in order to return their values at the end of the example
-	  GenICam::gcstring pixelFormatInitial = Arena::GetNodeValue<GenICam::gcstring>(pNodeMap, "PixelFormat");
-		GenICam::gcstring operatingModeInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "Scan3dOperatingMode");
-    
-		// Set pixel format
-		// Warning: HLT003S-001 / Helios2 - has only Coord3D_ABCY16 in this case
-		//    This example demonstrates data interpretation for both a signed or
-		//    unsigned pixel format. Default PIXEL_FORMAT here is set to
-		//    Coord3D_ABCY16 but this can be modified to be a signed pixel format
-		//    by changing it to Coord3D_ABCY16s.
-		std::cout << TAB1 << "Set " << DEPTH_PIXEL_FORMAT << " to pixel format\n";
-		Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "PixelFormat", DEPTH_PIXEL_FORMAT);
-
-		Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "Scan3dOperatingMode", "Distance5000mmMultiFreq");
+		std::cout << TAB1 << "Scan3dCoordinateSelector node is not found. Please make sure that Helios device is used for the example.\n";
+		return;
 	}
+
+	// validate if Scan3dCoordinateOffset node exists. If not - probaly Helios
+	// has an old firmware
+	GenApi::CFloatPtr checkpCoord = pDevice->GetNodeMap()->GetNode("Scan3dCoordinateOffset");
+	if (!checkpCoord)
+	{
+		std::cout << TAB1 << "Scan3dCoordinateOffset node is not found. Please update Helios firmware.\n";
+		return;
+	}
+
+	// get node values that will be changed in order to return their values at the end of the example	  
+	GenICam::gcstring operatingModeInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "Scan3dOperatingMode");
+	
+	// Set pixel format
+	// Warning: HLT003S-001 / Helios2 - has only Coord3D_ABCY16 in this case
+	//    This example demonstrates data interpretation for both a signed or
+	//    unsigned pixel format. Default PIXEL_FORMAT here is set to
+	//    Coord3D_ABCY16 but this can be modified to be a signed pixel format
+	//    by changing it to Coord3D_ABCY16s.
+	std::cout << TAB1 << "Set " << pixelFormat << " to pixel format\n";
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "PixelFormat", pixelFormat);
+
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "Scan3dOperatingMode", "Distance5000mmMultiFreq");
+
 	// Set trigger selector
 	//    Set the trigger selector to FrameStart. When triggered, the device will
 	//    start acquiring a single frame. This can also be set to
@@ -396,15 +420,8 @@ void ConfigureTriggerAndAcquireImage(Arena::IDevice *pDevice, std::string device
 			"TriggerSource",
 			"Software");
 	
-	if (deviceType == "depth")
-	{
-		Arena::SetNodeValue<int64_t>(pDevice->GetNodeMap(), "Scan3dImageAccumulation", 4);
-	}
-
-	// Set auto exposure
-	GenICam::gcstring exposureAutoInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "ExposureAuto");
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "ExposureAuto", "On");
-
+	Arena::SetNodeValue<int64_t>(pDevice->GetNodeMap(), "Scan3dImageAccumulation", 4);
+	
 	// enable stream auto negotiate packet size
 	Arena::SetNodeValue<bool>(
 		pDevice->GetTLStreamNodeMap(),
@@ -416,7 +433,93 @@ void ConfigureTriggerAndAcquireImage(Arena::IDevice *pDevice, std::string device
 		pDevice->GetTLStreamNodeMap(),
 		"StreamPacketResendEnable",
 		true);
+}
 
+void ConfigureColorCamera(Arena::IDevice *pDevice, GenICam::gcstring pixelFormat)
+{
+	// get node values that will be changed in order to return their values at
+	// the end of the example
+	GenICam::gcstring triggerSelectorInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "TriggerSelector");
+	GenICam::gcstring triggerModeInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "TriggerMode");
+	GenICam::gcstring triggerSourceInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "TriggerSource");
+	GenICam::gcstring pixelFormatInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "PixelFormat");;
+
+	// Set pixel format
+	std::cout << TAB1 << "Set " << pixelFormat << " to pixel format\n";
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "PixelFormat", pixelFormat);
+
+	// Set trigger selector
+	//    Set the trigger selector to FrameStart. When triggered, the device will
+	//    start acquiring a single frame. This can also be set to
+	//    AcquisitionStart or FrameBurstStart.
+	std::cout << TAB1 << "Set trigger selector to FrameStart\n";
+
+	Arena::SetNodeValue<GenICam::gcstring>(
+			pDevice->GetNodeMap(),
+			"TriggerSelector",
+			"FrameStart");
+
+	// Set trigger mode
+	//    Enable trigger mode before setting the source and selector and before
+	//    starting the stream. Trigger mode cannot be turned on and off while the
+	//    device is streaming.
+	std::cout << TAB1 << "Enable trigger mode\n";
+
+	Arena::SetNodeValue<GenICam::gcstring>(
+			pDevice->GetNodeMap(),
+			"TriggerMode",
+			"On");
+
+	// Set trigger source
+	//    Set the trigger source to software in order to trigger images without
+	//    the use of any additional hardware. Lines of the GPIO can also be used
+	//    to trigger.
+	std::cout << TAB1 << "Set trigger source to Software\n";
+
+	Arena::SetNodeValue<GenICam::gcstring>(
+			pDevice->GetNodeMap(),
+			"TriggerSource",
+			"Software");
+
+	// Set auto exposure
+
+	GenICam::gcstring exposureAutoInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "ExposureAuto");
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "ExposureAuto", "Continuous");
+	
+	// enable stream auto negotiate packet size
+	Arena::SetNodeValue<bool>(
+		pDevice->GetTLStreamNodeMap(),
+		"StreamAutoNegotiatePacketSize",
+		true);
+
+	// enable stream packet resend
+	Arena::SetNodeValue<bool>(
+		pDevice->GetTLStreamNodeMap(),
+		"StreamPacketResendEnable",
+		true);
+}
+
+// demonstrates basic trigger configuration and use
+// (1) sets trigger mode, source, and selector
+// (2) starts stream
+// (3) waits until trigger is armed
+// (4) triggers image
+// (5) gets image
+// (6) requeues buffer
+// (7) stops stream
+void ConfigureTriggerAndAcquireImage(Arena::IDevice *pDevice, std::string deviceType, GenICam::gcstring pixelFormat)
+{	
+	// Configure the camera by its type
+	if (deviceType == "depth")
+	{
+		if (pixelFormat == ""){pixelFormat = DEPTH_PIXEL_FORMAT;}
+		ConfigureDepthCamera(pDevice, pixelFormat);
+	}else if (deviceType == "color")
+	{
+		if (pixelFormat == ""){pixelFormat = COLOR_PIXEL_FORMAT;}
+		ConfigureColorCamera(pDevice, pixelFormat);
+	}
+	
 	// Start stream
 	//    When trigger mode is off and the acquisition mode is set to stream
 	//    continuously, starting the stream will have the camera begin acquiring
@@ -429,7 +532,7 @@ void ConfigureTriggerAndAcquireImage(Arena::IDevice *pDevice, std::string device
 	int num = 0;
 	while (true)
 	{	
-		std::cout << "Press enter to get next image\n";
+		std::cout << "\nPress enter to get next image\n";
 		std::getchar();
 		// Trigger Armed
 		//    Continually check until trigger is armed. Once the trigger is armed, it
@@ -463,24 +566,21 @@ void ConfigureTriggerAndAcquireImage(Arena::IDevice *pDevice, std::string device
 
 		std::cout << " (" << pImage->GetWidth() << "x" << pImage->GetHeight() << ")\n";
 
-		if (deviceType == "depth")
+		if (pixelFormat == DEPTH_PIXEL_FORMAT)
 		{
-			if ((pImage->GetPixelFormat() == Coord3D_ABC16) || (pImage->GetPixelFormat() == Coord3D_ABCY16) || (pImage->GetPixelFormat() == Coord3D_ABC16s) || (pImage->GetPixelFormat() == Coord3D_ABCY16s))
-			{
-				std::string file_name = "Captured_Images/Depth_Images/" + std::to_string(num++) + ".ply";
-				std::cout << "save " << file_name << "\n";
-				SaveDepthImage(pImage, file_name.c_str());
-				SaveIntensityImage(pImage, file_name.c_str());
-			}
-			else
-			{
-				std::cout << "This example requires the camera to be in a 3D image format like Coord3D_ABC16, Coord3D_ABCY16, Coord3D_ABC16s or Coord3D_ABCY16s\n\n";
-			}
-		}else if (deviceType == "color")
+			std::string file_name = "Captured_Images/Depth_Images/" + std::to_string(num++) + ".ply";
+			std::cout << TAB2 << "save " << file_name << "\n";
+			SaveDepthImage(pImage, file_name.c_str());
+		}else if (pixelFormat == COLOR_PIXEL_FORMAT)
 		{
 			std::string file_name = "Captured_Images/Color_Images/" + std::to_string(num++) + ".png";
-			std::cout << "save " << file_name << "\n";
+			std::cout << TAB2 << "save " << file_name << "\n";
 			SaveColorImage(pImage, file_name.c_str());
+		}else if (pixelFormat == INTENSITY_PIXEL_FORMAT)
+		{
+			std::string file_name = "Captured_Images/Intensity_Images/" + std::to_string(num++) + ".png";
+			std::cout << TAB2 << "save " << file_name << "\n";
+			SaveIntensityImage(pImage, file_name.c_str());
 		}
 
 		// requeue buffer
@@ -495,13 +595,14 @@ void ConfigureTriggerAndAcquireImage(Arena::IDevice *pDevice, std::string device
 
 	pDevice->StopStream();
 
+	/**
+	 * @brief for future integrating
 	// return nodes to their initial values
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "TriggerSource", triggerSourceInitial);
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "TriggerMode", triggerModeInitial);
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "TriggerSelector", triggerSelectorInitial);
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "ExposureAuto", exposureAutoInitial);
-	Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "Scan3dOperatingMode", operatingModeInitial);
-	Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "PixelFormat", pixelFormatInitial);
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "PixelFormat", pixelFormatInitial);
+	**/
 }
 
 // =-=-=-=-=-=-=-=-=-
@@ -516,11 +617,18 @@ int main()
 
 	std::cout << "Cpp_Trigger\n";
 
+	std::string macAddress = "1c:0f:af:00:46:6f";	// Helios Depth camera
+	// std::string macAddress = "1c:0f:af:0c:85:61";	// Phoneix Color camera
+
+	GenICam::gcstring pixelFormat = INTENSITY_PIXEL_FORMAT;
+
 	try
 	{
 		// prepare example
 		Arena::ISystem *pSystem = Arena::OpenSystem();
 		pSystem->UpdateDevices(1000);
+
+		// traverse the devices and store lucid cameras list
 		std::vector<Arena::DeviceInfo> deviceInfos = pSystem->GetDevices();
 		std::vector<uint8_t> lucidList;
 		for (uint8_t j=0; j<deviceInfos.size(); j++)
@@ -534,9 +642,15 @@ int main()
 			std::getchar();
 			return 0;
 		}
+
+		// traverse the lucid cameras list to find the device we want
 		uint8_t index = 0;
-		GenICam::gcstring macAddress = deviceInfos[lucidList[index]].MacAddressStr();
-		std::cout << "Current selected device is: "<< macAddress << std::endl;
+		for (uint8_t j=0; j<lucidList.size(); j++)
+		{
+			GenICam::gcstring tempMacAddress = deviceInfos[lucidList[j]].MacAddressStr();
+			if (macAddress == tempMacAddress.c_str()){index = j;}
+		}
+		std::cout << "Mac address of current selected device is: "<< macAddress << std::endl;
 		Arena::IDevice *pDevice = pSystem->CreateDevice(deviceInfos[lucidList[index]]);
 
 		// assign camera type
@@ -545,11 +659,12 @@ int main()
 	  std::string deviceModelName_tmp = deviceModelName.c_str();
 		if (deviceModelName_tmp.rfind("HLT", 0) == 0){deviceType = "depth";}
 		else if (deviceModelName_tmp.rfind("PHX", 0) == 0){deviceType = "color";}
-    std::cout << "Current selected device type is: "<< deviceType << std::endl;
+		std::cout << "Name of current selected device is: " << deviceModelName_tmp << std::endl;
+    std::cout << "Type of current selected device is: "<< deviceType << std::endl;
 
 		// run example
 		std::cout << "Start shooting...\n\n";
-		ConfigureTriggerAndAcquireImage(pDevice, deviceType);
+		ConfigureTriggerAndAcquireImage(pDevice, deviceType, pixelFormat);
 		std::cout << "\nShooting complete\n";
 
 		// clean up example
