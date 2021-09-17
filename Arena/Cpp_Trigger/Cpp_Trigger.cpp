@@ -311,7 +311,13 @@ void SaveColorImage(Arena::IImage *pImage, const char *filename)
 }
 
 void SaveIntensityImage(Arena::IImage *pImage, const char *filename)
-{
+{	
+	// If the image in complete
+	if (pImage->IsIncomplete())
+	{
+		std::cout << "This image is incomplete!" << std::endl;
+	}
+
 	// Prepare image parameters
 	//    An image's width, height, and bits per pixel are required to save to
 	//    disk. Its size and stride (i.e. pitch) can be calculated from those 3
@@ -386,6 +392,9 @@ void ConfigureDepthCamera(Arena::IDevice *pDevice, GenICam::gcstring pixelFormat
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "PixelFormat", pixelFormat);
 
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "Scan3dOperatingMode", "Distance5000mmMultiFreq");
+
+	// Set intensity amplitude gain, range(0,20) will be ok
+	Arena::SetNodeValue<double>(pDevice->GetNodeMap(), "Scan3dAmplitudeGain", 10);
 
 	// Set trigger selector
 	//    Set the trigger selector to FrameStart. When triggered, the device will
@@ -565,20 +574,21 @@ void ConfigureTriggerAndAcquireImage(Arena::IDevice *pDevice, std::string device
 		Arena::IImage *pImage = pDevice->GetImage(TIMEOUT);
 
 		std::cout << " (" << pImage->GetWidth() << "x" << pImage->GetHeight() << ")\n";
+		std::string timestamp = std::to_string(pImage->GetTimestampNs());
 
 		if (pixelFormat == DEPTH_PIXEL_FORMAT)
 		{
-			std::string file_name = "Captured_Images/Depth_Images/" + std::to_string(num++) + ".ply";
+			std::string file_name = "Captured_Images/Depth_Images/" + deviceType + std::to_string(num++) + "_" + timestamp + ".ply";
 			std::cout << TAB2 << "save " << file_name << "\n";
 			SaveDepthImage(pImage, file_name.c_str());
 		}else if (pixelFormat == COLOR_PIXEL_FORMAT)
 		{
-			std::string file_name = "Captured_Images/Color_Images/" + std::to_string(num++) + ".png";
+			std::string file_name = "Captured_Images/Color_Images/" + deviceType + std::to_string(num++) + "_" + timestamp + ".png";
 			std::cout << TAB2 << "save " << file_name << "\n";
 			SaveColorImage(pImage, file_name.c_str());
 		}else if (pixelFormat == INTENSITY_PIXEL_FORMAT)
 		{
-			std::string file_name = "Captured_Images/Intensity_Images/" + std::to_string(num++) + ".png";
+			std::string file_name = "Captured_Images/Intensity_Images/" + deviceType + std::to_string(num++) + "_" + timestamp + ".png";
 			std::cout << TAB2 << "save " << file_name << "\n";
 			SaveIntensityImage(pImage, file_name.c_str());
 		}
