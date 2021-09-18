@@ -491,7 +491,6 @@ void ConfigureColorCamera(Arena::IDevice *pDevice, GenICam::gcstring pixelFormat
 			"Software");
 
 	// Set auto exposure
-
 	GenICam::gcstring exposureAutoInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "ExposureAuto");
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "ExposureAuto", "Continuous");
 	
