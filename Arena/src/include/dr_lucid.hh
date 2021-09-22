@@ -22,6 +22,26 @@ struct PointData
 	int16_t intensity;
 };
 
+struct ColorInitialValue
+{
+  GenICam::gcstring triggerSourceInitial;
+  GenICam::gcstring triggerModeInitial;
+  GenICam::gcstring triggerSelectorInitial;
+  GenICam::gcstring pixelFormatInitial;
+  GenICam::gcstring exposureAutoInitial;
+
+};
+
+struct DepthInitialValue
+{
+  GenICam::gcstring triggerSourceInitial;
+  GenICam::gcstring triggerModeInitial;
+  GenICam::gcstring triggerSelectorInitial;
+  GenICam::gcstring pixelFormatInitial;
+  GenICam::gcstring operatingModeInitial;
+
+};
+
 class Lucid
 {
   public:
@@ -47,6 +67,8 @@ class Lucid
     Arena::IDevice *pDevice_;
     Arena::IImage *pImage_;
     int counter_;
+    ColorInitialValue *colorInitialValue_;
+    DepthInitialValue *depthInitialValue_;
 
     void ConfigureDepthCamera();
     void ConfigureColorCamera();

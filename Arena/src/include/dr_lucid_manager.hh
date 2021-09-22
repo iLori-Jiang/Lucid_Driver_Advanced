@@ -1,18 +1,3 @@
-#include "stdafx.h"
-#include "GenTL.h"
-
-#include "ArenaApi.h"
-#include "SaveApi.h"
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-
-#include "GenICam.h"
-
-#pragma GCC diagnostic pop
-
-#include "ArenaApi.h"
-
 #include <map>
 #include <vector>
 

@@ -37,7 +37,8 @@ SUBDIRS =   Cpp_Acquisition                           \
             Cpp_Trigger_NextLeader                    \
             Cpp_Trigger_OverlappingTrigger            \
             Cpp_UserSets                              \
-            IpConfigUtility
+            IpConfigUtility                           \
+            src
 
 
 
