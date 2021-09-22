@@ -579,17 +579,17 @@ void ConfigureTriggerAndAcquireImage(Arena::IDevice *pDevice, std::string device
 
 		if (pixelFormat == DEPTH_PIXEL_FORMAT)
 		{
-			std::string file_name = "Captured_Images/Depth_Images/" + deviceType + "_" + timestamp + "_" std::to_string(num++) + ".ply";
+			std::string file_name = "Captured_Images/Depth_Images/" + deviceType + "_" + timestamp + "_" + std::to_string(num++) + ".ply";
 			std::cout << TAB2 << "save " << file_name << "\n";
 			SaveDepthImage(pImage, file_name.c_str());
 		}else if (pixelFormat == COLOR_PIXEL_FORMAT)
 		{
-			std::string file_name = "Captured_Images/Color_Images/" + deviceType + "_" + timestamp + "_" std::to_string(num++) + ".png";
+			std::string file_name = "Captured_Images/Color_Images/" + deviceType + "_" + timestamp + "_" + std::to_string(num++) + ".png";
 			std::cout << TAB2 << "save " << file_name << "\n";
 			SaveColorImage(pImage, file_name.c_str());
 		}else if (pixelFormat == INTENSITY_PIXEL_FORMAT)
 		{
-			std::string file_name = "Captured_Images/Intensity_Images/" + deviceType + "_" + timestamp + "_" std::to_string(num++) + ".png";
+			std::string file_name = "Captured_Images/Intensity_Images/" + deviceType + "_" + timestamp + "_" + std::to_string(num++) + ".png";
 			std::cout << TAB2 << "save " << file_name << "\n";
 			SaveIntensityImage(pImage, file_name.c_str());
 		}
