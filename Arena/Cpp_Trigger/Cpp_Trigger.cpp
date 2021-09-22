@@ -391,10 +391,12 @@ void ConfigureDepthCamera(Arena::IDevice *pDevice, GenICam::gcstring pixelFormat
 	std::cout << TAB1 << "Set " << pixelFormat << " to pixel format\n";
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "PixelFormat", pixelFormat);
 
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "Scan3dOperatingMode", "Distance5000mmMultiFreq");
+	// Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "Scan3dOperatingMode", "Distance5000mmMultiFreq");
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice->GetNodeMap(), "Scan3dOperatingMode", "Distance3000mmSingleFreq");
+  Arena::SetNodeValue<int64_t>(pDevice->GetNodeMap(), "Scan3dDistanceMin", 1000);
 
 	// Set intensity amplitude gain, range(0,20) will be ok
-	Arena::SetNodeValue<double>(pDevice->GetNodeMap(), "Scan3dAmplitudeGain", 10);
+	Arena::SetNodeValue<double>(pDevice->GetNodeMap(), "Scan3dAmplitudeGain", 20);
 
 	// Set trigger selector
 	//    Set the trigger selector to FrameStart. When triggered, the device will
@@ -577,17 +579,17 @@ void ConfigureTriggerAndAcquireImage(Arena::IDevice *pDevice, std::string device
 
 		if (pixelFormat == DEPTH_PIXEL_FORMAT)
 		{
-			std::string file_name = "Captured_Images/Depth_Images/" + deviceType + std::to_string(num++) + "_" + timestamp + ".ply";
+			std::string file_name = "Captured_Images/Depth_Images/" + deviceType + "_" + timestamp + "_" std::to_string(num++) + ".ply";
 			std::cout << TAB2 << "save " << file_name << "\n";
 			SaveDepthImage(pImage, file_name.c_str());
 		}else if (pixelFormat == COLOR_PIXEL_FORMAT)
 		{
-			std::string file_name = "Captured_Images/Color_Images/" + deviceType + std::to_string(num++) + "_" + timestamp + ".png";
+			std::string file_name = "Captured_Images/Color_Images/" + deviceType + "_" + timestamp + "_" std::to_string(num++) + ".png";
 			std::cout << TAB2 << "save " << file_name << "\n";
 			SaveColorImage(pImage, file_name.c_str());
 		}else if (pixelFormat == INTENSITY_PIXEL_FORMAT)
 		{
-			std::string file_name = "Captured_Images/Intensity_Images/" + deviceType + std::to_string(num++) + "_" + timestamp + ".png";
+			std::string file_name = "Captured_Images/Intensity_Images/" + deviceType + "_" + timestamp + "_" std::to_string(num++) + ".png";
 			std::cout << TAB2 << "save " << file_name << "\n";
 			SaveIntensityImage(pImage, file_name.c_str());
 		}
