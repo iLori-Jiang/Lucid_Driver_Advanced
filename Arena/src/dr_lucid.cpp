@@ -339,10 +339,10 @@ void Lucid::ConfigureDepthCamera()
 {
 	// get node values that will be changed in order to return their values at
 	// the end of the example
-	depthInitialValue_->triggerSelectorInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSelector");
-	depthInitialValue_->triggerModeInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerMode");
-	depthInitialValue_->triggerSourceInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSource");
-	depthInitialValue_->pixelFormatInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "PixelFormat");;
+	depthInitialValue_.triggerSelectorInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSelector");
+	depthInitialValue_.triggerModeInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerMode");
+	depthInitialValue_.triggerSourceInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSource");
+	depthInitialValue_.pixelFormatInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "PixelFormat");;
 
 	// validate if Scan3dCoordinateSelector node exists. If not - probaly not
 	// Helios camera used running the example
@@ -365,7 +365,7 @@ void Lucid::ConfigureDepthCamera()
 	}
 
 	// get node values that will be changed in order to return their values at the end of the example	  
-	depthInitialValue_->operatingModeInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "Scan3dOperatingMode");
+	depthInitialValue_.operatingModeInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "Scan3dOperatingMode");
 	
 	// Set pixel format
 	// Warning: HLT003S-001 / Helios2 - has only Coord3D_ABCY16 in this case
@@ -434,10 +434,10 @@ void Lucid::ConfigureColorCamera()
 {
 	// get node values that will be changed in order to return their values at
 	// the end of the example
-	colorInitialValue_->triggerSelectorInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSelector");
-	colorInitialValue_->triggerModeInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerMode");
-	colorInitialValue_->triggerSourceInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSource");
-	colorInitialValue_->pixelFormatInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "PixelFormat");;
+	colorInitialValue_.triggerSelectorInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSelector");
+	colorInitialValue_.triggerModeInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerMode");
+	colorInitialValue_.triggerSourceInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSource");
+	colorInitialValue_.pixelFormatInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "PixelFormat");;
 
 	// Set pixel format
 	std::cout << TAB1 << "Set " << pixelFormat_ << " to pixel format\n";
@@ -477,7 +477,7 @@ void Lucid::ConfigureColorCamera()
 			"Software");
 
 	// Set auto exposure
-	colorInitialValue_->exposureAutoInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAuto");
+	colorInitialValue_.exposureAutoInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAuto");
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAuto", "Continuous");
 	
 	// enable stream auto negotiate packet size
@@ -602,21 +602,25 @@ void Lucid::RequeueBuffer(Arena::IImage *pImage)
 void Lucid::ReInitialDepthCamera()
 {
 	// return nodes to their initial values
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSource", depthInitialValue_->triggerSourceInitial);
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerMode", depthInitialValue_->triggerModeInitial);
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSelector", depthInitialValue_->triggerSelectorInitial);
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "PixelFormat", depthInitialValue_->pixelFormatInitial);
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "Scan3dOperatingMode", depthInitialValue_->operatingModeInitial);
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSource", depthInitialValue_.triggerSourceInitial);
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerMode", depthInitialValue_.triggerModeInitial);
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSelector", depthInitialValue_.triggerSelectorInitial);
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "PixelFormat", depthInitialValue_.pixelFormatInitial);
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "Scan3dOperatingMode", depthInitialValue_.operatingModeInitial);
+
+	std::cout << "Return nodes to their initial values" << std::endl;
 }
 
 void Lucid::ReInitialColorCamera()
 {
 	// return nodes to their initial values
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSource", colorInitialValue_->triggerSourceInitial);
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerMode", colorInitialValue_->triggerModeInitial);
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSelector", colorInitialValue_->triggerSelectorInitial);
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "PixelFormat", colorInitialValue_->pixelFormatInitial);
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAuto", colorInitialValue_->exposureAutoInitial);
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSource", colorInitialValue_.triggerSourceInitial);
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerMode", colorInitialValue_.triggerModeInitial);
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSelector", colorInitialValue_.triggerSelectorInitial);
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "PixelFormat", colorInitialValue_.pixelFormatInitial);
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAuto", colorInitialValue_.exposureAutoInitial);
+
+	std::cout << "Return nodes to their initial values" << std::endl;
 }
 
 void Lucid::StopStream()

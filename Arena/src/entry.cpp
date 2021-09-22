@@ -12,13 +12,13 @@ int main()
     helios->ConfigureCamera();
     helios->StartStream();
 
-		while (true)
-		{
+		// while (true)
+		// {
 			std::cout << "\nPress enter to get next image\n";
 			std::getchar();
 			helios->TriggerArming();
 			helios->GetAndSaveImage();
-		}
+		// }
 
     helios->StopStream();
   }

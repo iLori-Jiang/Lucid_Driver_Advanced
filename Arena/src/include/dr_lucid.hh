@@ -67,8 +67,8 @@ class Lucid
     Arena::IDevice *pDevice_;
     Arena::IImage *pImage_;
     int counter_;
-    ColorInitialValue *colorInitialValue_;
-    DepthInitialValue *depthInitialValue_;
+    ColorInitialValue colorInitialValue_;
+    DepthInitialValue depthInitialValue_;
 
     void ConfigureDepthCamera();
     void ConfigureColorCamera();
