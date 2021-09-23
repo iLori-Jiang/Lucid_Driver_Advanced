@@ -7,20 +7,26 @@ int main()
   try
   {
     LucidManager *lucidManager = new LucidManager();
-    // Lucid *helios = lucidManager->CreateDevice("1c:0f:af:00:46:6f", "Coord3D_ABCY16");
-		Lucid *helios = lucidManager->CreateDevice("1c:0f:af:0c:85:61", "BGR8");
+    Lucid *helios = lucidManager->CreateDevice("1c:0f:af:00:46:6f", "Coord3D_ABCY16");
+		Lucid *phoneix = lucidManager->CreateDevice("1c:0f:af:0c:85:61", "BGR8");
     helios->ConfigureCamera();
     helios->StartStream();
+		phoneix->ConfigureCamera();
+		phoneix->StartStream();
 
 		// while (true)
 		// {
-			std::cout << "\nPress enter to get next image\n";
-			std::getchar();
-			helios->TriggerArming();
-			helios->GetAndSaveImage();
+		std::cout << "\nPress enter to get next image\n";
+		std::getchar();
+		helios->TriggerArming();
+		phoneix->TriggerArming();
+
+		helios->GetAndSaveImage();
+		phoneix->GetAndSaveImage();
 		// }
 
     helios->StopStream();
+		phoneix->StopStream();
   }
   catch (GenICam::GenericException &ge)
 	{
