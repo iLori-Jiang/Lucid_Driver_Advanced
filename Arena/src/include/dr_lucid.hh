@@ -42,11 +42,22 @@ struct DepthInitialValue
 
 };
 
+struct ColorConfig
+{
+
+};
+
+struct DepthConfig
+{
+
+};
+
 class Lucid
 {
   public:
     std::string macAddress_;
     std::string deviceType_;
+    std::string deviceFamily_;
     GenICam::gcstring pixelFormat_;
     std::string deviceModelName_;
 
@@ -70,8 +81,9 @@ class Lucid
     ColorInitialValue colorInitialValue_;
     DepthInitialValue depthInitialValue_;
 
-    void ConfigureDepthCamera();
-    void ConfigureColorCamera();
+    void ConfigureHLTCamera();
+    void ConfigurePHXCamera();
+    void ConfigureTRICamera();
     void SaveDepthImage(Arena::IImage *pImage, const char *filename);
     void Depth2IntensityImage(Arena::IImage *pImage, const char *filename);
     void SaveColorImage(Arena::IImage *pImage, const char *filename);

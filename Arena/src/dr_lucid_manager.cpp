@@ -2,7 +2,7 @@
 
 LucidManager::LucidManager()
 {
-  // prepare example
+  // prepare devices
 	pSystem_ = Arena::OpenSystem();
 	pSystem_->UpdateDevices(1000);
 

@@ -34,8 +34,21 @@ Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, std::string macAd
 	// assign camera type
 	GenICam::gcstring deviceModelName = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "DeviceModelName");
 	deviceModelName_ = deviceModelName.c_str();
-	if (deviceModelName_.rfind("HLT", 0) == 0){deviceType_ = "depth";}
-	else if (deviceModelName_.rfind("PHX", 0) == 0){deviceType_ = "color";}
+	if (deviceModelName_.rfind("HLT", 0) == 0)
+	{
+		deviceType_ = "depth";
+		deviceFamily_ = "Helios";
+	}
+	else if (deviceModelName_.rfind("PHX", 0) == 0)
+	{
+		deviceType_ = "color";
+		deviceFamily_ = "Phoenix";
+	}
+	else if (deviceModelName_.rfind("TRI", 0) == 0)
+	{
+		deviceType_ = "color";
+		deviceFamily_ = "Triton";
+	}
 	
 	// output camera information
 	std::cout << "Mac address of current selected device is: "<< macAddress_ << std::endl;
@@ -335,7 +348,7 @@ void Lucid::SaveIntensityImage(Arena::IImage *pImage, const char *filename)
 	writer << pImage->GetData();
 }
 
-void Lucid::ConfigureDepthCamera()
+void Lucid::ConfigureHLTCamera()
 {
 	// get node values that will be changed in order to return their values at
 	// the end of the example
@@ -430,7 +443,7 @@ void Lucid::ConfigureDepthCamera()
 		true);
 }
 
-void Lucid::ConfigureColorCamera()
+void Lucid::ConfigurePHXCamera()
 {
 	// get node values that will be changed in order to return their values at
 	// the end of the example
@@ -442,6 +455,54 @@ void Lucid::ConfigureColorCamera()
 	// Set pixel format
 	std::cout << TAB1 << "Set " << pixelFormat_ << " to pixel format\n";
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "PixelFormat", pixelFormat_);
+
+	// Set resolution
+	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Width", 1280);
+	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Height", 960);
+	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetX", 384);	// (2048-1280)/2
+	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetY", 288);		// (1536-960)/2
+
+	// Set frame rate
+	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "AcquisitionFrameRateEnable", true);
+	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "AcquisitionFrameRate", 5);
+
+	// Set target brightness
+	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "TargetBrightness", 70);
+
+	// Set auto exposure
+	colorInitialValue_.exposureAutoInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAuto");
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAuto", "Continuous");
+	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "ExposureAutoLowerLimit", 31);
+	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "ExposureAutoUpperLimit", 140700);
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAutoAlgorithm", "Mean");
+	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "ExposureAutoDampingRaw", 230);
+
+	// Set gain
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "GainAuto", "Continuous");
+	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "GainAutoLowerLimit", 0);
+	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "GainAutoUpperLimit", 24);
+
+	// Set black level
+	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "BlackLevel", 0);
+	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "BlackLevelRaw", 0);
+
+	// Set white balance auto
+	// NOTE: turn it off when the environment is settled down
+	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "BalanceWhiteEnable", true);
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "BalanceWhiteAuto", "Continuous");
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "BalanceWhiteAutoAnchorSelector", "MaxRGB");
+	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "AwbWhitePatchEnable", true);
+
+	// Set gamma
+	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "GammaEnable", true);
+	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "Gamma", 1);
+
+	// Set color transformation
+	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "ColorTransformationEnable", true);
+	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "ColorTransformationValue", 1.5889);
+
+	// Set defect correction
+	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "DefectCorrectionEnable", true);
 
 	// Set trigger selector
 	//    Set the trigger selector to FrameStart. When triggered, the device will
@@ -476,10 +537,114 @@ void Lucid::ConfigureColorCamera()
 			"TriggerSource",
 			"Software");
 
+	// enable stream auto negotiate packet size
+	Arena::SetNodeValue<bool>(
+		pDevice_->GetTLStreamNodeMap(),
+		"StreamAutoNegotiatePacketSize",
+		true);
+
+	// enable stream packet resend
+	Arena::SetNodeValue<bool>(
+		pDevice_->GetTLStreamNodeMap(),
+		"StreamPacketResendEnable",
+		true);
+}
+
+void Lucid::ConfigureTRICamera()
+{
+	// get node values that will be changed in order to return their values at
+	// the end of the example
+	colorInitialValue_.triggerSelectorInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSelector");
+	colorInitialValue_.triggerModeInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerMode");
+	colorInitialValue_.triggerSourceInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSource");
+	colorInitialValue_.pixelFormatInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "PixelFormat");;
+
+	// Set pixel format
+	std::cout << TAB1 << "Set " << pixelFormat_ << " to pixel format\n";
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "PixelFormat", pixelFormat_);
+
+	// Set resolution
+	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Width", 1280);
+	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Height", 960);
+	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetX", 384);	// (2048-1280)/2
+	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetY", 288);		// (1536-960)/2
+
+	// Set frame rate
+	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "AcquisitionFrameRateEnable", true);
+	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "AcquisitionFrameRate", 5);
+
+	// Set target brightness
+	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "TargetBrightness", 70);
+
 	// Set auto exposure
 	colorInitialValue_.exposureAutoInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAuto");
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAuto", "Continuous");
-	
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAutoLimitAuto", "Continuous");
+	// Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "ExposureAutoLowerLimit", 31);
+	// Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "ExposureAutoUpperLimit", 140700);
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAutoAlgorithm", "Mean");
+	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "ExposureAutoDampingRaw", 230);
+
+	// Set gain
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "GainAuto", "Continuous");
+	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "GainAutoLowerLimit", 0);
+	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "GainAutoUpperLimit", 24);
+
+	// Set black level
+	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "BlackLevel", 0);
+	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "BlackLevelRaw", 0);
+
+	// Set white balance auto
+	// NOTE: turn it off when the environment is settled down
+	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "BalanceWhiteEnable", true);
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "BalanceWhiteAuto", "Continuous");
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "BalanceWhiteAutoAnchorSelector", "MaxRGB");
+	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "AwbWhitePatchEnable", true);
+
+	// Set gamma
+	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "GammaEnable", true);
+	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "Gamma", 1);
+
+	// Set color transformation
+	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "ColorTransformationEnable", true);
+	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "ColorTransformationValue", 1.5889);
+
+	// Set defect correction
+	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "DefectCorrectionEnable", true);
+
+	// Set trigger selector
+	//    Set the trigger selector to FrameStart. When triggered, the device will
+	//    start acquiring a single frame. This can also be set to
+	//    AcquisitionStart or FrameBurstStart.
+	std::cout << TAB1 << "Set trigger selector to FrameStart\n";
+
+	Arena::SetNodeValue<GenICam::gcstring>(
+			pDevice_->GetNodeMap(),
+			"TriggerSelector",
+			"FrameStart");
+
+	// Set trigger mode
+	//    Enable trigger mode before setting the source and selector and before
+	//    starting the stream. Trigger mode cannot be turned on and off while the
+	//    device is streaming.
+	std::cout << TAB1 << "Enable trigger mode\n";
+
+	Arena::SetNodeValue<GenICam::gcstring>(
+			pDevice_->GetNodeMap(),
+			"TriggerMode",
+			"On");
+
+	// Set trigger source
+	//    Set the trigger source to software in order to trigger images without
+	//    the use of any additional hardware. Lines of the GPIO can also be used
+	//    to trigger.
+	std::cout << TAB1 << "Set trigger source to Software\n";
+
+	Arena::SetNodeValue<GenICam::gcstring>(
+			pDevice_->GetNodeMap(),
+			"TriggerSource",
+			"Software");
+
 	// enable stream auto negotiate packet size
 	Arena::SetNodeValue<bool>(
 		pDevice_->GetTLStreamNodeMap(),
@@ -495,15 +660,12 @@ void Lucid::ConfigureColorCamera()
 
 void Lucid::ConfigureCamera()
 {
-	if (deviceType_ == "depth")
-	{
-		ConfigureDepthCamera();
-	}else if (deviceType_ == "color")
-	{
-		ConfigureColorCamera();
-	}else
-	{
+	if (deviceFamily_ == "Helios"){ConfigureHLTCamera();}
+	else if (deviceFamily_ == "Phoenix"){ConfigurePHXCamera();}
+	else if (deviceFamily_ == "Triton"){ConfigureTRICamera();}
+	else{
 		// EXCEPTION
+		return;
 	}
 }
 
@@ -542,7 +704,7 @@ void Lucid::GetAndSaveImage()
 	std::cout << " (" << pImage_->GetWidth() << "x" << pImage_->GetHeight() << ")\n";
 	
 	std::string timestamp = std::to_string(pImage_->GetTimestampNs());
-	std::string filename = deviceType_ + "_" + timestamp + "_" + std::to_string(counter_++);
+	std::string filename = deviceFamily_ + "_" + timestamp + "_" + std::to_string(counter_++);
 	
 	if (pixelFormat_ == COLOR_PIXEL_FORMAT)
 	{

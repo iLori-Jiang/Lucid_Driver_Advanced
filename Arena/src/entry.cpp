@@ -7,26 +7,34 @@ int main()
   try
   {
     LucidManager *lucidManager = new LucidManager();
-    Lucid *helios = lucidManager->CreateDevice("1c:0f:af:00:46:6f", "Coord3D_ABCY16");
-		Lucid *phoneix = lucidManager->CreateDevice("1c:0f:af:0c:85:61", "BGR8");
-    helios->ConfigureCamera();
-    helios->StartStream();
-		phoneix->ConfigureCamera();
-		phoneix->StartStream();
+
+    // Lucid *helios = lucidManager->CreateDevice("1c:0f:af:00:46:6f", "Coord3D_ABCY16");
+		// Lucid *phoneix = lucidManager->CreateDevice("1c:0f:af:0c:85:61", "BGR8");
+		Lucid *triton = lucidManager->CreateDevice("1c:0f:af:00:32:32", "BGR8");
+
+    // helios->ConfigureCamera();
+    // helios->StartStream();
+		// phoneix->ConfigureCamera();
+		// phoneix->StartStream();
+		triton->ConfigureCamera();
+		triton->StartStream();
 
 		// while (true)
 		// {
 		std::cout << "\nPress enter to get next image\n";
 		std::getchar();
-		helios->TriggerArming();
-		phoneix->TriggerArming();
+		// helios->TriggerArming();
+		// phoneix->TriggerArming();
+		triton->TriggerArming();
 
-		helios->GetAndSaveImage();
-		phoneix->GetAndSaveImage();
+		// helios->GetAndSaveImage();
+		// phoneix->GetAndSaveImage();
+		triton->GetAndSaveImage();
 		// }
 
-    helios->StopStream();
-		phoneix->StopStream();
+    // helios->StopStream();
+		// phoneix->StopStream();
+		triton->StopStream();
   }
   catch (GenICam::GenericException &ge)
 	{

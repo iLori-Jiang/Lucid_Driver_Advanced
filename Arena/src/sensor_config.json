@@ -1,0 +1,35 @@
+{
+  "COMMON": {
+    // COMMOH for both Lucid cameras
+    "fps": 5,
+    "trigger_mode": true,
+    "fetch_frame_timeout": 2000
+  },
+  "COLOR": {
+    // COLOR for Lucid color cameras, i.e. Phoenix or Triton
+    "mac": "1c:0f:af:0c:85:61",
+    "resolution": 1280,
+    // color pixel_format (1)rgb, (2)gray
+    "pixel_format": "rgb",
+    "exposure_auto": true,
+    "gain_auto": true,
+    "whitebalance_auto": true,
+    "gamma": 1.0,
+    "black_level": 0,
+    "offset_x": 0,
+    "offset_y": 0,
+    "brightness": 100,
+    "reverse_x": false,
+    "reverse_y": false
+  },
+  "DEPTH": {
+    // DEPTH for Lucid depth cameras, i.e. Helios
+    "mac": "1c:0f:af:00:46:6f",
+    "resolution": 640,
+    // depth pixel_format (1)cloud, (2)gray
+    "pixel_format": "cloud",
+    "detect_range": 3000,
+    "detect_distance_min": 1000,
+    "amplitude_gain": 30,
+  }
+}
