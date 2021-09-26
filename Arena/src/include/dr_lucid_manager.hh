@@ -8,8 +8,8 @@ class LucidManager{
     LucidManager();
     ~LucidManager();
 
-    Lucid *CreateDevice(std::string macAddress, std::string pixelFormat, ColorConfig colorConfig);
-    Lucid *CreateDevice(std::string macAddress, std::string pixelFormat, DepthConfig depthConfig);
+    Lucid *CreateDevice(ColorConfig colorConfig);
+    Lucid *CreateDevice(DepthConfig depthConfig);
     Lucid *GetDevice(std::string macAddress);
     bool DestoryDevice(std::string macAddress);
     bool DestoryAllDevice();

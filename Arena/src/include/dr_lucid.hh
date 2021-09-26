@@ -44,10 +44,10 @@ struct DepthInitialValue
 
 struct ColorConfig
 {
-  int64_t fps;
+  double fps;
   bool trigger_mode;
   int64_t fetch_frame_timeout;
-  std::string mac;
+  std::string macAddress;
   int64_t resolution;
   std::string pixel_format;
   bool exposure_auto;
@@ -62,7 +62,23 @@ struct ColorConfig
 
 struct DepthConfig
 {
-
+  double fps;
+  bool trigger_mode;
+  int64_t fetch_frame_timeout;
+  std::string macAddress;
+  int64_t resolution;
+  double exposure_time;
+  std::string pixel_format;
+  int64_t detect_range;
+  double detect_distance_min;
+  int64_t amplitude_gain;
+  bool confidence_threshold_enable;
+  int64_t confidence_threshold_min;
+  int64_t image_accumulation;
+  std::string conversion_gain;
+  bool flying_pixels_removal_enable;
+  int64_t flying_pixels_distance_min;
+  bool spatial_filter_enable;
 };
 
 class Lucid
@@ -75,9 +91,10 @@ class Lucid
     std::string deviceModelName_;
     ColorConfig colorConfig_;
     DepthConfig depthConfig_;
+    int64_t fetch_frame_timeout_;
 
-    Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, std::string macAddress, std::string pixelFormat, ColorConfig colorConfig);
-    Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, std::string macAddress, std::string pixelFormat, DepthConfig depthConfig);
+    Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, ColorConfig colorConfig);
+    Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, DepthConfig depthConfig);
     ~Lucid();
     Arena::IDevice *GetDevice();
 

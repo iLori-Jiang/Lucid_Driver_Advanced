@@ -4,9 +4,6 @@
 #define TAB2 "    "
 #define TAB3 "        "
 
-// image timeout
-#define TIMEOUT 10000
-
 // pixel format
 #define COLOR_PIXEL_FORMAT "BGR8"
 #define DEPTH_PIXEL_FORMAT "Coord3D_ABCY16"
@@ -16,32 +13,29 @@
 #define SCALE 0.25f
 #define OFFSET 0.00f
 
-Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, std::string macAddress, std::string pixelFormat, ColorConfig colorConfig)
+Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, ColorConfig colorConfig)
 {
 	colorConfig_ = colorConfig;
 
-	macAddress_ = macAddress;
+	macAddress_ = colorConfig.macAddress;
+	fetch_frame_timeout_ = colorConfig.fetch_frame_timeout;
 
 	// initial camera system and device
 	pDevice_ = pDevice;
 	pSystem_ = pSystem;
 	counter_ = 0;
 
-	if (pixelFormat == "BGR8"){pixelFormat_ = COLOR_PIXEL_FORMAT;}
-	else if (pixelFormat == "Coord3D_ABCY16"){pixelFormat_ = DEPTH_PIXEL_FORMAT;}
-	else if (pixelFormat == "Mono8"){pixelFormat_ = INTENSITY_PIXEL_FORMAT;}
-	else {// EXCEPTION
+	if (colorConfig.pixel_format == "rgb"){pixelFormat_ = COLOR_PIXEL_FORMAT;}
+	else if (colorConfig.pixel_format == "gray"){pixelFormat_ = INTENSITY_PIXEL_FORMAT;}
+	else {
+		// EXCEPTION
+		return;
 	}
 
 	// assign camera type
 	GenICam::gcstring deviceModelName = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "DeviceModelName");
 	deviceModelName_ = deviceModelName.c_str();
-	if (deviceModelName_.rfind("HLT", 0) == 0)
-	{
-		deviceType_ = "depth";
-		deviceFamily_ = "Helios";
-	}
-	else if (deviceModelName_.rfind("PHX", 0) == 0)
+	if (deviceModelName_.rfind("PHX", 0) == 0)
 	{
 		deviceType_ = "color";
 		deviceFamily_ = "Phoenix";
@@ -50,29 +44,34 @@ Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, std::string macAd
 	{
 		deviceType_ = "color";
 		deviceFamily_ = "Triton";
+	}else{
+		// EXCEPTION
+		return;
 	}
 	
 	// output camera information
 	std::cout << "Mac address of current selected device is: "<< macAddress_ << std::endl;
 	std::cout << "Name of current selected device is: " << deviceModelName_ << std::endl;
-	std::cout << "Type of current selected device is: "<< deviceType_ << std::endl;
+	std::cout << "Type of current selected device is: "<< deviceType_ << std::endl << std::endl;
 }
 
-Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, std::string macAddress, std::string pixelFormat, DepthConfig depthConfig)
+Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, DepthConfig depthConfig)
 {
 	depthConfig_ = depthConfig;
 
-	macAddress_ = macAddress;
+	macAddress_ = depthConfig.macAddress;
+	fetch_frame_timeout_ = depthConfig.fetch_frame_timeout;
 
 	// initial camera system and device
 	pDevice_ = pDevice;
 	pSystem_ = pSystem;
 	counter_ = 0;
 
-	if (pixelFormat == "BGR8"){pixelFormat_ = COLOR_PIXEL_FORMAT;}
-	else if (pixelFormat == "Coord3D_ABCY16"){pixelFormat_ = DEPTH_PIXEL_FORMAT;}
-	else if (pixelFormat == "Mono8"){pixelFormat_ = INTENSITY_PIXEL_FORMAT;}
-	else {// EXCEPTION
+	if (depthConfig.pixel_format == "cloud"){pixelFormat_ = DEPTH_PIXEL_FORMAT;}
+	else if (depthConfig.pixel_format == "gray"){pixelFormat_ = INTENSITY_PIXEL_FORMAT;}
+	else {
+		// EXCEPTION
+		return;
 	}
 
 	// assign camera type
@@ -82,22 +81,15 @@ Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, std::string macAd
 	{
 		deviceType_ = "depth";
 		deviceFamily_ = "Helios";
-	}
-	else if (deviceModelName_.rfind("PHX", 0) == 0)
-	{
-		deviceType_ = "color";
-		deviceFamily_ = "Phoenix";
-	}
-	else if (deviceModelName_.rfind("TRI", 0) == 0)
-	{
-		deviceType_ = "color";
-		deviceFamily_ = "Triton";
+	}else{
+		// EXCEPTION
+		return;
 	}
 	
 	// output camera information
 	std::cout << "Mac address of current selected device is: "<< macAddress_ << std::endl;
 	std::cout << "Name of current selected device is: " << deviceModelName_ << std::endl;
-	std::cout << "Type of current selected device is: "<< deviceType_ << std::endl;
+	std::cout << "Type of current selected device is: "<< deviceType_ << std::endl << std::endl;
 }
 
 Lucid::~Lucid()
@@ -407,7 +399,7 @@ void Lucid::ConfigureHLTCamera()
 	if (!checkpCoordSelector)
 	{
 		// EXCEPTION
-		std::cout << TAB1 << "Scan3dCoordinateSelector node is not found. Please make sure that Helios device is used for the example.\n";
+		std::cout << TAB1 << "Scan3dCoordinateSelector node is not found. Please make sure that Helios device is used.\n";
 		return;
 	}
 
@@ -433,11 +425,93 @@ void Lucid::ConfigureHLTCamera()
 	std::cout << TAB1 << "Set " << pixelFormat_ << " to pixel format\n";
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "PixelFormat", pixelFormat_);
 
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "Scan3dOperatingMode", "Distance3000mmSingleFreq");
-	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Scan3dDistanceMin", 1000);
+	// Set scan 3D mode selector
+	// Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "Scan3dModelSelector", "Processed");
+	
+	// Set exposure time
+	if (depthConfig_.exposure_time == 1000)
+	{
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureTimeSelector", "Exp1000Us");
+	}
+	else if (depthConfig_.exposure_time == 250)
+	{
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureTimeSelector", "Exp250Us");
+	}
+	else if (depthConfig_.exposure_time == 62.5)
+	{
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureTimeSelector", "Exp62_5Us");
+	}
+	else{
+		// EXCEPTION
+		return;
+	}
+
+	// Set detect range
+	if (depthConfig_.detect_range == 1250)
+	{
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "Scan3dOperatingMode", "Distance1250mmSingleFreq");
+	}
+	else if (depthConfig_.detect_range == 3000){
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "Scan3dOperatingMode", "Distance3000mmSingleFreq");
+	}
+	else if (depthConfig_.detect_range == 4000){
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "Scan3dOperatingMode", "Distance4000mmSingleFreq");
+	}
+	else if (depthConfig_.detect_range == 5000){
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "Scan3dOperatingMode", "Distance5000mmMultiFreq");
+	}
+	else if (depthConfig_.detect_range == 6000){
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "Scan3dOperatingMode", "Distance6000mmSingleFreq");
+	}
+	else if (depthConfig_.detect_range == 8300){
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "Scan3dOperatingMode", "Distance8300mmMultiFreq");
+	}
+	else{
+		// EXCEPTION
+		return;
+	}
+
+	// Set the min of detecting range, detect range [min, min+range]
+	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Scan3dDistanceMin", depthConfig_.detect_distance_min);
 
 	// Set intensity amplitude gain, range(0,20) will be ok
-	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "Scan3dAmplitudeGain", 30);
+	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "Scan3dAmplitudeGain", depthConfig_.amplitude_gain);
+
+	// Set confidence threshold
+	if (depthConfig_.confidence_threshold_enable)
+	{
+		Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "Scan3dConfidenceThresholdEnable", true);
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Scan3dConfidenceThresholdMin", depthConfig_.confidence_threshold_min);
+	}else{
+		Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "Scan3dConfidenceThresholdEnable", false);
+	}
+
+	// Set image accumulation
+	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Scan3dImageAccumulation", depthConfig_.image_accumulation);
+
+	// Set conversion gain
+	if (depthConfig_.conversion_gain == "low")
+	{
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ConversionGain", "Low");
+	}else if (depthConfig_.conversion_gain == "high")
+	{
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ConversionGain", "High");
+	}else{
+		// EXCEPTION
+		return;
+	}
+
+	// Set flying pixels removal
+	if (depthConfig_.flying_pixels_removal_enable)
+	{
+		Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "Scan3dFlyingPixelsRemovalEnable", true);
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Scan3dFlyingPixelsDistanceThreshold", depthConfig_.flying_pixels_distance_min);
+	}else{
+		Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "Scan3dFlyingPixelsRemovalEnable", false);
+	}
+
+	// Set spatial filter
+	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "Scan3dSpatialFilterEnable", depthConfig_.spatial_filter_enable);
 
 	// Set trigger selector
 	//    Set the trigger selector to FrameStart. When triggered, the device will
@@ -471,9 +545,7 @@ void Lucid::ConfigureHLTCamera()
 			pDevice_->GetNodeMap(),
 			"TriggerSource",
 			"Software");
-	
-	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Scan3dImageAccumulation", 4);
-	
+
 	// enable stream auto negotiate packet size
 	Arena::SetNodeValue<bool>(
 		pDevice_->GetTLStreamNodeMap(),
@@ -500,22 +572,38 @@ void Lucid::ConfigurePHXCamera()
 	std::cout << TAB1 << "Set " << pixelFormat_ << " to pixel format\n";
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "PixelFormat", pixelFormat_);
 
+	// Set reverse
+	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "ReverseX", colorConfig_.reverse_x);
+	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "ReverseY", colorConfig_.reverse_y);
+
 	// Set resolution
-	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Width", 1280);
-	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Height", 960);
-	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetX", 384);	// (2048-1280)/2
-	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetY", 288);		// (1536-960)/2
+	if (colorConfig_.resolution == 1280)
+	{
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Width", 1280);
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Height", 960);
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetX", 384);		// (2048-1280)/2
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetY", 288);		// (1536-960)/2
+	}else if (colorConfig_.resolution == 640)
+	{
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Width", 640);
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Height", 480);
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetX", 704);		// (2048-640)/2
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetY", 528);		// (1536-480)/2
+	}else{
+		// EXCEPTION
+		return;
+	}
 
 	// Set frame rate
 	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "AcquisitionFrameRateEnable", true);
-	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "AcquisitionFrameRate", 5);
+	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "AcquisitionFrameRate", colorConfig_.fps);
 
 	// Set target brightness
-	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "TargetBrightness", 70);
+	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "TargetBrightness", colorConfig_.brightness);
 
 	// Set auto exposure
 	colorInitialValue_.exposureAutoInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAuto");
-	if (colorConfig_.exposureAuto)
+	if (colorConfig_.exposure_auto)
 	{
 		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAuto", "Continuous");
 		Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "ExposureAutoLowerLimit", 31);
@@ -524,18 +612,18 @@ void Lucid::ConfigurePHXCamera()
 		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "ExposureAutoDampingRaw", 230);
 	}else{
 		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAuto", "Off");
-		Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "ExposureTime", 18111.9);
+		Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "ExposureTime", colorConfig_.exposure_time);
 	}	
 
 	// Set gain
-	if (colorConfig_.gainAuto)
+	if (colorConfig_.gain_auto)
 	{
 		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "GainAuto", "Continuous");
 		Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "GainAutoLowerLimit", 0);
 		Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "GainAutoUpperLimit", 24);
 	}else{
 		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "GainAuto", "Off");
-		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Gain", 0);
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Gain", colorConfig_.gain);
 	}
 
 	// Set black level
@@ -545,7 +633,7 @@ void Lucid::ConfigurePHXCamera()
 	// Set white balance auto
 	// NOTE: turn it off when the environment is settled down
 	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "BalanceWhiteEnable", true);
-	if (colorConfig_.whiteBalanceAuto)
+	if (colorConfig_.whitebalance_auto)
 	{
 		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "BalanceWhiteAuto", "Continuous");
 		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "BalanceWhiteAutoAnchorSelector", "MaxRGB");
@@ -625,26 +713,38 @@ void Lucid::ConfigureTRICamera()
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "PixelFormat", pixelFormat_);
 
 	// Set reverse
-	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "ReverseX", false);
-	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "ReverseY", false);
+	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "ReverseX", colorConfig_.reverse_x);
+	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "ReverseY", colorConfig_.reverse_y);
 
 	// Set resolution
-	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Width", 1280);
-	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Height", 960);
-	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetX", 384);	// (2048-1280)/2
-	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetY", 288);		// (1536-960)/2
+	if (colorConfig_.resolution == 1280)
+	{
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Width", 1280);
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Height", 960);
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetX", 384);		// (2048-1280)/2
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetY", 288);		// (1536-960)/2
+	}else if (colorConfig_.resolution == 640)
+	{
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Width", 640);
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Height", 480);
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetX", 704);		// (2048-640)/2
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetY", 528);		// (1536-480)/2
+	}else{
+		// EXCEPTION
+		return;
+	}
 
 	// Set frame rate
 	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "AcquisitionFrameRateEnable", true);
-	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "AcquisitionFrameRate", 5);
+	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "AcquisitionFrameRate", colorConfig_.fps);
 
 	// Set target brightness
-	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "TargetBrightness", 70);
+	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "TargetBrightness", colorConfig_.brightness);
 
 	// Set auto exposure
 	// Set auto exposure
 	colorInitialValue_.exposureAutoInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAuto");
-	if (colorConfig_.exposureAuto)
+	if (colorConfig_.exposure_auto)
 	{
 		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAuto", "Continuous");
 		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAutoLimitAuto", "Continuous");
@@ -652,18 +752,18 @@ void Lucid::ConfigureTRICamera()
 		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "ExposureAutoDampingRaw", 230);
 	}else{
 		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAuto", "Off");
-		Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "ExposureTime", 18111.9);
+		Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "ExposureTime", colorConfig_.exposure_time);
 	}
 
 	// Set gain
-	if (colorConfig_.gainAuto)
+	if (colorConfig_.gain_auto)
 	{
 		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "GainAuto", "Continuous");
 		Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "GainAutoLowerLimit", 0);
 		Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "GainAutoUpperLimit", 24);
 	}else{
 		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "GainAuto", "Off");
-		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Gain", 0);
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Gain", colorConfig_.gain);
 	}
 
 	// Set black level
@@ -673,7 +773,7 @@ void Lucid::ConfigureTRICamera()
 	// Set white balance auto
 	// NOTE: turn it off when the environment is settled down
 	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "BalanceWhiteEnable", true);
-	if (colorConfig_.whiteBalanceAuto)
+	if (colorConfig_.whitebalance_auto)
 	{
 		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "BalanceWhiteAuto", "Continuous");
 		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "BalanceWhiteAutoAnchorSelector", "MaxRGB");
@@ -781,7 +881,7 @@ void Lucid::GetAndSaveImage()
 			"TriggerSoftware");
 
 	std::cout << TAB2 << "Get image";
-	pImage_ = pDevice_->GetImage(TIMEOUT);
+	pImage_ = pDevice_->GetImage(fetch_frame_timeout_);
 	std::cout << " (" << pImage_->GetWidth() << "x" << pImage_->GetHeight() << ")\n";
 	
 	std::string timestamp = std::to_string(pImage_->GetTimestampNs());
@@ -830,7 +930,7 @@ Arena::IImage *Lucid::GetImage() const
 			"TriggerSoftware");
 
 	std::cout << TAB2 << "Get image";
-	*pImage_ = *pDevice_->GetImage(TIMEOUT);
+	*pImage_ = *pDevice_->GetImage(fetch_frame_timeout_);
 	return pImage_;
 }
 

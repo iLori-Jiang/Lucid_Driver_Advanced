@@ -29,37 +29,33 @@ LucidManager::~LucidManager()
   Arena::CloseSystem(pSystem_);
 }
 
-Lucid *LucidManager::CreateDevice(std::string macAddress, std::string pixelFormat, ColorConfig colorConfig)
+Lucid *LucidManager::CreateDevice(ColorConfig colorConfig)
 { 
   std::map<std::string, Arena::DeviceInfo>::iterator it;
-  it = deviceList_.find(macAddress);
+  it = deviceList_.find(colorConfig.macAddress);
   if (it != deviceList_.end())
   {
     Arena::IDevice *pDevice = pSystem_->CreateDevice(it->second);
-    Lucid *lucid = new Lucid(pDevice, pSystem_, macAddress, pixelFormat, colorConfig);
+    Lucid *lucid = new Lucid(pDevice, pSystem_, colorConfig);
     activeDeviceList_.push_back(lucid);
     return lucid;
-  }
-  else 
-  {
+  }else{
     // EXCEPTION
     return NULL;
   }
 }
 
-Lucid *LucidManager::CreateDevice(std::string macAddress, std::string pixelFormat, DepthConfig depthConfig)
+Lucid *LucidManager::CreateDevice(DepthConfig depthConfig)
 { 
   std::map<std::string, Arena::DeviceInfo>::iterator it;
-  it = deviceList_.find(macAddress);
+  it = deviceList_.find(depthConfig.macAddress);
   if (it != deviceList_.end())
   {
     Arena::IDevice *pDevice = pSystem_->CreateDevice(it->second);
-    Lucid *lucid = new Lucid(pDevice, pSystem_, macAddress, pixelFormat, depthConfig);
+    Lucid *lucid = new Lucid(pDevice, pSystem_, depthConfig);
     activeDeviceList_.push_back(lucid);
     return lucid;
-  }
-  else 
-  {
+  }else{
     // EXCEPTION
     return NULL;
   }
