@@ -16,8 +16,52 @@
 #define SCALE 0.25f
 #define OFFSET 0.00f
 
-Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, std::string macAddress, std::string pixelFormat)
+Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, std::string macAddress, std::string pixelFormat, ColorConfig colorConfig)
 {
+	colorConfig_ = colorConfig;
+
+	macAddress_ = macAddress;
+
+	// initial camera system and device
+	pDevice_ = pDevice;
+	pSystem_ = pSystem;
+	counter_ = 0;
+
+	if (pixelFormat == "BGR8"){pixelFormat_ = COLOR_PIXEL_FORMAT;}
+	else if (pixelFormat == "Coord3D_ABCY16"){pixelFormat_ = DEPTH_PIXEL_FORMAT;}
+	else if (pixelFormat == "Mono8"){pixelFormat_ = INTENSITY_PIXEL_FORMAT;}
+	else {// EXCEPTION
+	}
+
+	// assign camera type
+	GenICam::gcstring deviceModelName = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "DeviceModelName");
+	deviceModelName_ = deviceModelName.c_str();
+	if (deviceModelName_.rfind("HLT", 0) == 0)
+	{
+		deviceType_ = "depth";
+		deviceFamily_ = "Helios";
+	}
+	else if (deviceModelName_.rfind("PHX", 0) == 0)
+	{
+		deviceType_ = "color";
+		deviceFamily_ = "Phoenix";
+	}
+	else if (deviceModelName_.rfind("TRI", 0) == 0)
+	{
+		deviceType_ = "color";
+		deviceFamily_ = "Triton";
+	}
+	
+	// output camera information
+	std::cout << "Mac address of current selected device is: "<< macAddress_ << std::endl;
+	std::cout << "Name of current selected device is: " << deviceModelName_ << std::endl;
+	std::cout << "Type of current selected device is: "<< deviceType_ << std::endl;
+}
+
+Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, std::string macAddress, std::string pixelFormat, DepthConfig depthConfig)
+{
+	depthConfig_ = depthConfig;
+
 	macAddress_ = macAddress;
 
 	// initial camera system and device
@@ -471,16 +515,28 @@ void Lucid::ConfigurePHXCamera()
 
 	// Set auto exposure
 	colorInitialValue_.exposureAutoInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAuto");
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAuto", "Continuous");
-	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "ExposureAutoLowerLimit", 31);
-	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "ExposureAutoUpperLimit", 140700);
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAutoAlgorithm", "Mean");
-	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "ExposureAutoDampingRaw", 230);
+	if (colorConfig_.exposureAuto)
+	{
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAuto", "Continuous");
+		Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "ExposureAutoLowerLimit", 31);
+		Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "ExposureAutoUpperLimit", 140700);
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAutoAlgorithm", "Mean");
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "ExposureAutoDampingRaw", 230);
+	}else{
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAuto", "Off");
+		Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "ExposureTime", 18111.9);
+	}	
 
 	// Set gain
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "GainAuto", "Continuous");
-	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "GainAutoLowerLimit", 0);
-	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "GainAutoUpperLimit", 24);
+	if (colorConfig_.gainAuto)
+	{
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "GainAuto", "Continuous");
+		Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "GainAutoLowerLimit", 0);
+		Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "GainAutoUpperLimit", 24);
+	}else{
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "GainAuto", "Off");
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Gain", 0);
+	}
 
 	// Set black level
 	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "BlackLevel", 0);
@@ -489,9 +545,14 @@ void Lucid::ConfigurePHXCamera()
 	// Set white balance auto
 	// NOTE: turn it off when the environment is settled down
 	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "BalanceWhiteEnable", true);
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "BalanceWhiteAuto", "Continuous");
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "BalanceWhiteAutoAnchorSelector", "MaxRGB");
-	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "AwbWhitePatchEnable", true);
+	if (colorConfig_.whiteBalanceAuto)
+	{
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "BalanceWhiteAuto", "Continuous");
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "BalanceWhiteAutoAnchorSelector", "MaxRGB");
+		Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "AwbWhitePatchEnable", true);
+	}else{
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "BalanceWhiteAuto", "Off");
+	}
 
 	// Set gamma
 	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "GammaEnable", true);
@@ -563,6 +624,10 @@ void Lucid::ConfigureTRICamera()
 	std::cout << TAB1 << "Set " << pixelFormat_ << " to pixel format\n";
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "PixelFormat", pixelFormat_);
 
+	// Set reverse
+	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "ReverseX", false);
+	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "ReverseY", false);
+
 	// Set resolution
 	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Width", 1280);
 	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Height", 960);
@@ -577,18 +642,29 @@ void Lucid::ConfigureTRICamera()
 	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "TargetBrightness", 70);
 
 	// Set auto exposure
+	// Set auto exposure
 	colorInitialValue_.exposureAutoInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAuto");
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAuto", "Continuous");
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAutoLimitAuto", "Continuous");
-	// Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "ExposureAutoLowerLimit", 31);
-	// Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "ExposureAutoUpperLimit", 140700);
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAutoAlgorithm", "Mean");
-	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "ExposureAutoDampingRaw", 230);
+	if (colorConfig_.exposureAuto)
+	{
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAuto", "Continuous");
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAutoLimitAuto", "Continuous");
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAutoAlgorithm", "Mean");
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "ExposureAutoDampingRaw", 230);
+	}else{
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "ExposureAuto", "Off");
+		Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "ExposureTime", 18111.9);
+	}
 
 	// Set gain
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "GainAuto", "Continuous");
-	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "GainAutoLowerLimit", 0);
-	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "GainAutoUpperLimit", 24);
+	if (colorConfig_.gainAuto)
+	{
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "GainAuto", "Continuous");
+		Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "GainAutoLowerLimit", 0);
+		Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "GainAutoUpperLimit", 24);
+	}else{
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "GainAuto", "Off");
+		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Gain", 0);
+	}
 
 	// Set black level
 	Arena::SetNodeValue<double>(pDevice_->GetNodeMap(), "BlackLevel", 0);
@@ -597,9 +673,14 @@ void Lucid::ConfigureTRICamera()
 	// Set white balance auto
 	// NOTE: turn it off when the environment is settled down
 	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "BalanceWhiteEnable", true);
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "BalanceWhiteAuto", "Continuous");
-	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "BalanceWhiteAutoAnchorSelector", "MaxRGB");
-	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "AwbWhitePatchEnable", true);
+	if (colorConfig_.whiteBalanceAuto)
+	{
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "BalanceWhiteAuto", "Continuous");
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "BalanceWhiteAutoAnchorSelector", "MaxRGB");
+		Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "AwbWhitePatchEnable", true);
+	}else{
+		Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "BalanceWhiteAuto", "Off");
+	}
 
 	// Set gamma
 	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "GammaEnable", true);

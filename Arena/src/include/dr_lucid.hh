@@ -44,7 +44,20 @@ struct DepthInitialValue
 
 struct ColorConfig
 {
-
+  int64_t fps;
+  bool trigger_mode;
+  int64_t fetch_frame_timeout;
+  std::string mac;
+  int64_t resolution;
+  std::string pixel_format;
+  bool exposure_auto;
+  double exposure_time;
+  bool gain_auto;
+  int64_t gain;
+  bool whitebalance_auto;
+  int64_t brightness;
+  bool reverse_x;
+  bool reverse_y;
 };
 
 struct DepthConfig
@@ -60,8 +73,11 @@ class Lucid
     std::string deviceFamily_;
     GenICam::gcstring pixelFormat_;
     std::string deviceModelName_;
+    ColorConfig colorConfig_;
+    DepthConfig depthConfig_;
 
-    Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, std::string macAddress, std::string pixelFormat);
+    Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, std::string macAddress, std::string pixelFormat, ColorConfig colorConfig);
+    Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, std::string macAddress, std::string pixelFormat, DepthConfig depthConfig);
     ~Lucid();
     Arena::IDevice *GetDevice();
 

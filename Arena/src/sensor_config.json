@@ -1,6 +1,6 @@
 {
   "COMMON": {
-    // COMMOH for both Lucid cameras
+    // COMMON for both Lucid cameras
     "fps": 5,
     "trigger_mode": true,
     "fetch_frame_timeout": 2000
@@ -8,16 +8,18 @@
   "COLOR": {
     // COLOR for Lucid color cameras, i.e. Phoenix or Triton
     "mac": "1c:0f:af:0c:85:61",
+    // common resolution 1280*960, 640*480
     "resolution": 1280,
     // color pixel_format (1)rgb, (2)gray
     "pixel_format": "rgb",
+    // exposure time unit in us
     "exposure_auto": true,
+    "exposure_time": 18111.9,
+    // gain range [0,24]
     "gain_auto": true,
+    "gain": 0,
+    // white balance auto recommended set to false
     "whitebalance_auto": true,
-    "gamma": 1.0,
-    "black_level": 0,
-    "offset_x": 0,
-    "offset_y": 0,
     "brightness": 100,
     "reverse_x": false,
     "reverse_y": false
