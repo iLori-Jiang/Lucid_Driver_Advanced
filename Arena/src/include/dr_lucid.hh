@@ -13,6 +13,9 @@
 
 #include "ArenaApi.h"
 
+#include "opencv2\opencv.hpp"
+#include "opencv2\highgui.hpp"
+
 // store x, y, z data in mm and intensity for a given point
 struct PointData
 {
@@ -103,6 +106,9 @@ class Lucid
     void StartStream();
     void TriggerArming();
     Arena::IImage *GetImage() const;
+    cv::Mat *Image2CVMat(Arena::IImage *pImage, cv::Mat& cv_image);
+    void DepthToIntensityImage(Arena::IImage *pImage);
+    void DepthToPcd(Arena::IImage *pImage);
     void RequeueBuffer(Arena::IImage *pImage);
     void StopStream();
 
@@ -118,7 +124,6 @@ class Lucid
     void ConfigurePHXCamera();
     void ConfigureTRICamera();
     void SaveDepthImage(Arena::IImage *pImage, const char *filename);
-    void Depth2IntensityImage(Arena::IImage *pImage, const char *filename);
     void SaveColorImage(Arena::IImage *pImage, const char *filename);
     void SaveIntensityImage(Arena::IImage *pImage, const char *filename);
     void ReInitialDepthCamera();

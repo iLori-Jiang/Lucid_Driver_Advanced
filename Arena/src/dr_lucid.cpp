@@ -155,146 +155,6 @@ void Lucid::SaveDepthImage(Arena::IImage *pImage, const char *filename)
 	writer << pImage->GetData();
 }
 
-void Lucid::Depth2IntensityImage(Arena::IImage *pImage, const char *filename)
-{
-	// prepare info from input buffer
-	size_t width = pImage->GetWidth();
-	size_t height = pImage->GetHeight();
-	size_t size = width * height;
-	size_t srcBpp = pImage->GetBitsPerPixel();
-	size_t srcPixelSize = srcBpp / 8;
-	const uint8_t* pInput = pImage->GetData();
-	const uint8_t* pIn = pInput;
-
-	// minDepth z value is set to 32767 to guarantee closer points exist as this
-	// is the largest value possible
-	PointData minDepth = { 0, 0, 32767, 0 };
-	PointData maxDepth = { 0, 0, 0, 0 };
-
-	// find points with min and max z values
-	std::cout << TAB3 << "Find points with min and max z values\n";
-
-	// using strcmp to avoid conversion issue
-	int compareResult_ABCY16s = strcmp(DEPTH_PIXEL_FORMAT, "Coord3D_ABCY16s"); // if they are equal compareResult_ABCY16s = 0
-	int compareResult_ABCY16 = strcmp(DEPTH_PIXEL_FORMAT, "Coord3D_ABCY16");	 // if they are equal compareResult_ABCY16 = 0
-
-	bool isSignedPixelFormat = false;
-
-	// if PIXEL_FORMAT is equal to Coord3D_ABCY16s
-	if (compareResult_ABCY16s == 0)
-	{
-		isSignedPixelFormat = true;
-
-		for (size_t i = 0; i < size; i++)
-		{
-			// Extract point data to signed 16 bit integer
-			//    The first channel is the x coordinate, second channel is the y
-			//    coordinate, the third channel is the z coordinate and the
-			//    fourth channel is intensity. We offset pIn by 2 for each
-			//    channel because pIn is an 8 bit integer and we want to read it
-			//    as a 16 bit integer.
-			int16_t x = *reinterpret_cast<const int16_t*>(pIn);
-			int16_t y = *reinterpret_cast<const int16_t*>((pIn + 2));
-			int16_t z = *reinterpret_cast<const int16_t*>((pIn + 4));
-			int16_t intensity = *reinterpret_cast<const int16_t*>((pIn + 6));
-
-			// convert x, y and z values to mm using their coordinate scales
-			x = int16_t(double(x) * SCALE);
-			y = int16_t(double(y) * SCALE);
-			z = int16_t(double(z) * SCALE);
-
-			if (z < minDepth.z && z > 0)
-			{
-				minDepth.x = x;
-				minDepth.y = y;
-				minDepth.z = z;
-				minDepth.intensity = intensity;
-			}
-			else if (z > maxDepth.z)
-			{
-				maxDepth.x = x;
-				maxDepth.y = y;
-				maxDepth.z = z;
-				maxDepth.intensity = intensity;
-			}
-
-			pIn += srcPixelSize;
-		}
-
-		// display data
-		std::cout << TAB3 << "Minimum depth point found with z distance of " << minDepth.z
-				<< "mm and intensity " << minDepth.intensity << " at coordinates (" << minDepth.x
-				<< "mm, " << minDepth.y << "mm)" << std::endl;
-
-		std::cout << TAB3 << "Maximum depth point found with z distance of " << maxDepth.z
-				<< "mm and intensity " << maxDepth.intensity << " at coordinates (" << maxDepth.x
-				<< "mm, " << maxDepth.y << "mm)" << std::endl;
-	}
-	// if PIXEL_FORMAT is equal to Coord3D_ABCY16
-	else if (compareResult_ABCY16 == 0)
-	{
-		for (size_t i = 0; i < size; i++)
-		{
-			// Extract point data to signed 16 bit integer
-			//    The first channel is the x coordinate, second channel is the y
-			//    coordinate, the third channel is the z coordinate and the
-			//    fourth channel is intensity. We offset pIn by 2 for each
-			//    channel because pIn is an 8 bit integer and we want to read it
-			//    as a 16 bit integer.
-			uint16_t x = *reinterpret_cast<const uint16_t*>(pIn);
-			uint16_t y = *reinterpret_cast<const uint16_t*>((pIn + 2));
-			uint16_t z = *reinterpret_cast<const uint16_t*>((pIn + 4));
-			uint16_t intensity = *reinterpret_cast<const uint16_t*>((pIn + 6));
-
-			// if z is less than max value, as invalid values get filtered to
-			// 65535
-			if (z < 65535)
-			{
-				// Convert x, y and z to millimeters
-				//    Using each coordinates' appropriate scales, convert x, y
-				//    and z values to mm. For the x and y coordinates in an
-				//    unsigned pixel format, we must then add the offset to our
-				//    converted values in order to get the correct position in
-				//    millimeters.
-				x = uint16_t(double(x) * SCALE + OFFSET);
-				y = uint16_t((double(y) * SCALE) + OFFSET);
-				z = uint16_t(double(z) * SCALE);
-
-				if (z < minDepth.z && z > 0)
-				{
-					minDepth.x = x;
-					minDepth.y = y;
-					minDepth.z = z;
-					minDepth.intensity = intensity;
-				}
-				else if (z > maxDepth.z)
-				{
-					maxDepth.x = x;
-					maxDepth.y = y;
-					maxDepth.z = z;
-					maxDepth.intensity = intensity;
-				}
-			}
-
-			pIn += srcPixelSize;
-		}
-
-		// display data
-		std::cout << TAB3 << "Minimum depth point found with z distance of " << minDepth.z
-				<< "mm and intensity " << minDepth.intensity << " at coordinates (" << minDepth.x
-				<< "mm, " << minDepth.y << "mm)" << std::endl;
-
-		std::cout << TAB3 << "Maximum depth point found with z distance of " << maxDepth.z
-				<< "mm and intensity " << maxDepth.intensity << " at coordinates (" << maxDepth.x
-				<< "mm, " << maxDepth.y << "mm)" << std::endl;
-	}
-	else
-	{
-		std::cout << "This example requires the camera to be in either 3D image format Coord3D_ABCY16 or Coord3D_ABCY16s\n\n";
-	}
-
-}
-
 void Lucid::SaveColorImage(Arena::IImage *pImage, const char *filename)
 {
 	// Convert image
@@ -912,6 +772,14 @@ void Lucid::GetAndSaveImage()
 	pDevice_->RequeueBuffer(pImage_);
 }
 
+void Lucid::RequeueBuffer(Arena::IImage *pImage)
+{
+	// requeue buffer
+	std::cout << TAB2 << "Requeue buffer\n";
+
+	pDevice_->RequeueBuffer(pImage);
+}
+
 Arena::IImage *Lucid::GetImage() const
 {
 	// Trigger an image
@@ -930,17 +798,201 @@ Arena::IImage *Lucid::GetImage() const
 			"TriggerSoftware");
 
 	std::cout << TAB2 << "Get image";
-	*pImage_ = *pDevice_->GetImage(fetch_frame_timeout_);
-	return pImage_;
+	*pImage = *pDevice_->GetImage(fetch_frame_timeout_);
+	std::cout << " (" << pImage->GetWidth() << "x" << pImage->GetHeight() << ")\n";
+
+	RequeueBuffer(pImage);
+
+	return pImage;
 }
 
-void Lucid::RequeueBuffer(Arena::IImage *pImage)
+cv::Mat *Lucid::Image2CVMat(Arena::IImage *pImage)
 {
-	// requeue buffer
-	std::cout << TAB2 << "Requeue buffer\n";
-
-	pDevice_->RequeueBuffer(pImage);
+	if (pixelFormat_ == COLOR_PIXEL_FORMAT)
+	{
+		auto pConverted = Arena::ImageFactory::Convert(pImage, COLOR_PIXEL_FORMAT);
+		cv::Mat *cv_image = cv::Mat((int)pConverted->GetHeight(), (int)pConverted->GetWidth(), CV_8UC3, (void*)pConverted->GetData());
+		return cv_image;
+	}else if (pixelFormat_ == INTENSITY_PIXEL_FORMAT)
+	{
+		cv::Mat *cv_image = cv::Mat((int)pImage->GetHeight(), (int)pImage->GetWidth(), CV_8UC1, (void*)pImage->GetData());
+		return cv_image;
+	}else if (pixelFormat_ == DEPTH_PIXEL_FORMAT)
+	{
+		cv::Mat *cv_image = cv::Mat((int)pImage->GetHeight(), (int)pImage->GetWidth(), CV_32FC3, (uint16_t*)pImage->GetData());
+		return cv_image;
+	}else
+	{
+		// EXCEPTION
+		return;
+	}
 }
+
+void Lucid::DepthToIntensityImage(Arena::IImage *pImage)
+{	
+	if (pixelFormat_ == DEPTH_PIXEL_FORMAT)
+	{	
+		GenApi::INodeMap* pNodeMap = pDevice_->GetNodeMap();
+		// get the coordinate scale in order to convert x, y and z values to mm as
+		// well as the offset for x and y to correctly adjust values when in an
+		// unsigned pixel format
+		std::cout << TAB1 << "Get xyz coordinate scales and offsets\n\n";
+
+		Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "Scan3dCoordinateSelector", "CoordinateA");
+		// getting scaleX as float by casting since SetPly() will expect it passed as
+		// float
+		float scaleX = static_cast<float>(Arena::GetNodeValue<double>(pNodeMap, "Scan3dCoordinateScale"));
+		// getting offsetX as float by casting since SetPly() will expect it passed
+		// as float
+		float offsetX = static_cast<float>(Arena::GetNodeValue<double>(pNodeMap, "Scan3dCoordinateOffset"));
+		Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "Scan3dCoordinateSelector", "CoordinateB");
+		double scaleY = Arena::GetNodeValue<double>(pNodeMap, "Scan3dCoordinateScale");
+		// getting offsetY as float by casting since SetPly() will expect it passed
+		// as float
+		float offsetY = static_cast<float>(Arena::GetNodeValue<double>(pNodeMap, "Scan3dCoordinateOffset"));
+		Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "Scan3dCoordinateSelector", "CoordinateC");
+		double scaleZ = Arena::GetNodeValue<double>(pNodeMap, "Scan3dCoordinateScale");
+
+		// prepare info from input buffer
+		size_t width = pImage->GetWidth();
+		size_t height = pImage->GetHeight();
+		size_t size = width * height;
+		size_t srcBpp = pImage->GetBitsPerPixel();
+		size_t srcPixelSize = srcBpp / 8;
+		const uint8_t* pInput = pImage->GetData();
+		const uint8_t* pIn = pInput;
+
+		cv::Mat cv_image(height, width, CV_8UC1, cv::Scalar::all(0));
+
+		bool isSignedPixelFormat = false;
+
+		for (size_t i = 0; i < size; i++)
+		{
+			// Extract point data to signed 16 bit integer
+			//    The first channel is the x coordinate, second channel is the y
+			//    coordinate, the third channel is the z coordinate and the
+			//    fourth channel is intensity. We offset pIn by 2 for each
+			//    channel because pIn is an 8 bit integer and we want to read it
+			//    as a 16 bit integer.
+			uint16_t x = *reinterpret_cast<const uint16_t*>(pIn);
+			uint16_t y = *reinterpret_cast<const uint16_t*>((pIn + 2));
+			uint16_t z = *reinterpret_cast<const uint16_t*>((pIn + 4));
+			uint16_t intensity = *reinterpret_cast<const uint16_t*>((pIn + 6));
+
+			// if z is less than max value, as invalid values get filtered to
+			// 65535
+			if (z < 65535)
+			{
+				// Convert x, y and z to millimeters
+				//    Using each coordinates' appropriate scales, convert x, y
+				//    and z values to mm. For the x and y coordinates in an
+				//    unsigned pixel format, we must then add the offset to our
+				//    converted values in order to get the correct position in
+				//    millimeters.
+				x = uint16_t(double(x) * scaleX + offsetX);
+				y = uint16_t(double(y) * scaleY + offsetY);
+				z = uint16_t(double(z) * scaleZ);
+			}
+
+			// transform ply to pcd
+			/**
+			pcl::PointXYZ pt;
+			pt.x = x;
+			pt.y = y;
+			pt.z = z;
+			ptcloud->points.push_back(pt);
+			**/
+
+
+			pIn += srcPixelSize;
+			}
+	}else
+	{
+		//EXCEPTION
+		return;
+	}
+}
+
+void Lucid::DepthToPcd(Arena::IImage *pImage)
+{
+	if (pixelFormat_ == DEPTH_PIXEL_FORMAT)
+	{	
+		GenApi::INodeMap* pNodeMap = pDevice_->GetNodeMap();
+		// get the coordinate scale in order to convert x, y and z values to mm as
+		// well as the offset for x and y to correctly adjust values when in an
+		// unsigned pixel format
+		std::cout << TAB1 << "Get xyz coordinate scales and offsets\n\n";
+
+		Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "Scan3dCoordinateSelector", "CoordinateA");
+		// getting scaleX as float by casting since SetPly() will expect it passed as
+		// float
+		float scaleX = static_cast<float>(Arena::GetNodeValue<double>(pNodeMap, "Scan3dCoordinateScale"));
+		// getting offsetX as float by casting since SetPly() will expect it passed
+		// as float
+		float offsetX = static_cast<float>(Arena::GetNodeValue<double>(pNodeMap, "Scan3dCoordinateOffset"));
+		Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "Scan3dCoordinateSelector", "CoordinateB");
+		double scaleY = Arena::GetNodeValue<double>(pNodeMap, "Scan3dCoordinateScale");
+		// getting offsetY as float by casting since SetPly() will expect it passed
+		// as float
+		float offsetY = static_cast<float>(Arena::GetNodeValue<double>(pNodeMap, "Scan3dCoordinateOffset"));
+		Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "Scan3dCoordinateSelector", "CoordinateC");
+		double scaleZ = Arena::GetNodeValue<double>(pNodeMap, "Scan3dCoordinateScale");
+
+		// prepare info from input buffer
+		size_t width = pImage->GetWidth();
+		size_t height = pImage->GetHeight();
+		size_t size = width * height;
+		size_t srcBpp = pImage->GetBitsPerPixel();
+		size_t srcPixelSize = srcBpp / 8;
+		const uint8_t* pInput = pImage->GetData();
+		const uint8_t* pIn = pInput;
+
+		bool isSignedPixelFormat = false;
+
+		for (size_t i = 0; i < size; i++)
+		{
+			// Extract point data to signed 16 bit integer
+			//    The first channel is the x coordinate, second channel is the y
+			//    coordinate, the third channel is the z coordinate and the
+			//    fourth channel is intensity. We offset pIn by 2 for each
+			//    channel because pIn is an 8 bit integer and we want to read it
+			//    as a 16 bit integer.
+			uint16_t x = *reinterpret_cast<const uint16_t*>(pIn);
+			uint16_t y = *reinterpret_cast<const uint16_t*>((pIn + 2));
+			uint16_t z = *reinterpret_cast<const uint16_t*>((pIn + 4));
+			uint16_t intensity = *reinterpret_cast<const uint16_t*>((pIn + 6));
+
+			// if z is less than max value, as invalid values get filtered to
+			// 65535
+			if (z < 65535)
+			{
+				// Convert x, y and z to millimeters
+				//    Using each coordinates' appropriate scales, convert x, y
+				//    and z values to mm. For the x and y coordinates in an
+				//    unsigned pixel format, we must then add the offset to our
+				//    converted values in order to get the correct position in
+				//    millimeters.
+				x = uint16_t(double(x) * scaleX + offsetX);
+				y = uint16_t(double(y) * scaleY + offsetY);
+				z = uint16_t(double(z) * scaleZ);
+			}
+
+			// transform ply to pcd
+			/**
+			pcl::PointXYZ pt;
+			pt.x = x;
+			pt.y = y;
+			pt.z = z;
+			ptcloud->points.push_back(pt);
+			**/
+			pIn += srcPixelSize;
+			}
+	}else
+	{
+		//EXCEPTION
+		return;
+	}
+};
 
 void Lucid::ReInitialDepthCamera()
 {
