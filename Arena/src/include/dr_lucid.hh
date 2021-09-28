@@ -16,6 +16,9 @@
 #include "opencv2\opencv.hpp"
 #include "opencv2\highgui.hpp"
 
+#include<pcl/io/pcd_io.h>
+#include<pcl/point_types.h>
+
 // store x, y, z data in mm and intensity for a given point
 struct PointData
 {
@@ -106,10 +109,11 @@ class Lucid
     void StartStream();
     void TriggerArming();
     Arena::IImage *GetImage() const;
-    cv::Mat *Image2CVMat(Arena::IImage *pImage, cv::Mat& cv_image);
-    void DepthToIntensityImage(Arena::IImage *pImage);
-    void DepthToPcd(Arena::IImage *pImage);
-    void RequeueBuffer(Arena::IImage *pImage);
+    cv::Mat *Image2CVMat(Arena::IImage *pImage);
+    cv::Mat *DepthToIntensityImage(Arena::IImage *pImage);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr DepthToPcd(Arena::IImage *pImage);
+    void SavePcd(pcl::PointCloud<pcl::PointXYZ>::Ptr);
+    void SaveCVMat(cv::Mat *cv_image, const char *filename)
     void StopStream();
 
   private:
@@ -126,7 +130,9 @@ class Lucid
     void SaveDepthImage(Arena::IImage *pImage, const char *filename);
     void SaveColorImage(Arena::IImage *pImage, const char *filename);
     void SaveIntensityImage(Arena::IImage *pImage, const char *filename);
+    void RequeueBuffer(Arena::IImage *pImage);
     void ReInitialDepthCamera();
     void ReInitialColorCamera();
+    std::vector<PointData> *ProcessDepthImage(Arena::IImage *pImage);
 };
 
