@@ -765,7 +765,7 @@ Arena::IImage *Lucid::GetImage() const
 	return pImage;
 }
 
-cv::Mat *Lucid::Image2CVMat(Arena::IImage *pImage)
+cv::Mat *Lucid::ImageToCVMat(Arena::IImage *pImage)
 {
 	if (pixelFormat_ == COLOR_PIXEL_FORMAT)
 	{
@@ -880,7 +880,7 @@ cv::Mat *Lucid::DepthToIntensityImage(Arena::IImage *pImage)
 	size_t height = (int)pImage->GetHeight();
 	size_t width = (int)pImage->GetWidth();
 	
-	auto *data_points = ProcessDepthImage(pImage);
+	std::vector<PointData> *data_points = ProcessDepthImage(pImage);
 	cv::Mat *cv_image(height, width, CV_8UC1, cv::Scalar::all(0));
 
 	uchar *pointer;
@@ -906,7 +906,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr Lucid::DepthToPcd(Arena::IImage *pImage)
 		return;
 	}
 
-	auto *data_points = ProcessDepthImage(pImage);
+	std::vector<PointData> *data_points = ProcessDepthImage(pImage);
 	pcl::PointCloud<pcl::PointXYZ>::Ptr ptcloud(new pcl::PointCloud<pcl::PointXYZ>);
 
 	for (auto point : data_points)
@@ -925,7 +925,7 @@ void Lucid::SavePcd(pcl::PointCloud<pcl::PointXYZ>::Ptr ptcloud, const char *fil
 {
 	std::cout << TAB3 << "Save image\n";
 
-	pcl::io::savePCDFileASCII (filename, ptcloud);
+	pcl::io::savePCDFileASCII(filename, ptcloud);
 }
 
 void Lucid::SaveCVMat(cv::Mat *cv_image, const char *filename)
@@ -960,7 +960,8 @@ void Lucid::GetAndSaveImage()
 	if (pixelFormat_ == COLOR_PIXEL_FORMAT)
 	{
 		filename = "/home/bot/JHY/lucid_test_WS/ArenaSDK_v0.1.54_Linux_x64/ArenaSDK_TEST/Captured_Images/Color_Images/" + filename + ".png";
-		SaveColorImage(pImage_, filename.c_str());
+		// SaveColorImage(pImage_, filename.c_str());
+		SaveCVMat(ImageToCVMat(pImage), filename.c_str());
 		std::cout << TAB2 << "save " << filename << "\n";
 	}
 	else if (pixelFormat_ == DEPTH_PIXEL_FORMAT)
@@ -974,7 +975,8 @@ void Lucid::GetAndSaveImage()
 	else if (pixelFormat_ == INTENSITY_PIXEL_FORMAT)
 	{
 		filename = "/home/bot/JHY/lucid_test_WS/ArenaSDK_v0.1.54_Linux_x64/ArenaSDK_TEST/Captured_Images/Intensity_Images/" + filename + ".png";
-		SaveIntensityImage(pImage_, filename.c_str());
+		// SaveIntensityImage(pImage_, filename.c_str());
+		SaveCVMat(ImageToCVMat(pImage), filename.c_str());
 		std::cout << TAB2 << "save " << filename << "\n";
 	}
 

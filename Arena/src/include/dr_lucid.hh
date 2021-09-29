@@ -109,7 +109,7 @@ class Lucid
     void StartStream();
     void TriggerArming();
     Arena::IImage *GetImage() const;
-    cv::Mat *Image2CVMat(Arena::IImage *pImage);
+    cv::Mat *ImageToCVMat(Arena::IImage *pImage);
     cv::Mat *DepthToIntensityImage(Arena::IImage *pImage);
     pcl::PointCloud<pcl::PointXYZ>::Ptr DepthToPcd(Arena::IImage *pImage);
     void SavePcd(pcl::PointCloud<pcl::PointXYZ>::Ptr);
