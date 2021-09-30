@@ -974,9 +974,9 @@ void Lucid::GetAndSaveImage()
 	if (pixelFormat_ == COLOR_PIXEL_FORMAT)
 	{
 		filename = save_path_ + "Color_Images/" + filename + ".png";
-		// SaveColorImage(pImage_, filename.c_str());
 		SaveCVMat(ImageToCVMat(pImage_), filename);
-		std::cout << TAB2 << "save " << filename << "\n";
+		// SaveColorImage(pImage_, filename.c_str());
+		// std::cout << TAB2 << "save " << filename << "\n";
 	}
 	else if (pixelFormat_ == DEPTH_PIXEL_FORMAT)
 	{
@@ -986,14 +986,14 @@ void Lucid::GetAndSaveImage()
 		SavePcd(DepthToPcd(pImage_), pcd_filename);
 		SaveCVMat(DepthToIntensityImage(pImage_), intensity_filename);
 		// SaveDepthImage(pImage_, filename.c_str());
-		std::cout << TAB2 << "save " << filename << "\n";
+		// std::cout << TAB2 << "save " << filename << "\n";
 	}
 	else if (pixelFormat_ == INTENSITY_PIXEL_FORMAT)
 	{
 		filename = save_path_ + "Intensity_Images/" + filename + ".png";
 		// SaveIntensityImage(pImage_, filename.c_str());
 		SaveCVMat(ImageToCVMat(pImage_), filename);
-		std::cout << TAB2 << "save " << filename << "\n";
+		// std::cout << TAB2 << "save " << filename << "\n";
 	}
 
 	// requeue buffer
