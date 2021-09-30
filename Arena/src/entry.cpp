@@ -61,8 +61,8 @@ int main()
 		// triton->ConfigureCamera();
 		// triton->StartStream();
 
-		while (true)
-		{
+		//while (true)
+		//{
 			std::cout << "\nPress enter to get next image\n";
 			std::getchar();
 			helios->TriggerArming();
@@ -72,7 +72,7 @@ int main()
 			helios->GetAndSaveImage();
 			phoneix->GetAndSaveImage();
 			// triton->GetAndSaveImage();
-		}
+		//}
 
     helios->StopStream();
 		phoneix->StopStream();

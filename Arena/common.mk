@@ -56,7 +56,10 @@ CC=g++
 INCLUDE= -I../../../include/Arena \
          -I../../../include/Save \
          -I../../../include/GenTL \
-         -I../../../GenICam/library/CPP/include
+         -I../../../GenICam/library/CPP/include \
+         -I/usr/include/pcl-1.9 \
+         -I/usr/include/eigen3 \
+         -I/usr/include/vtk-6.3 \
 
 CFLAGS=-Wall -g -O2 -std=c++11 -Wno-unknown-pragmas
 
@@ -66,7 +69,20 @@ FFMPEGLIBS = -lavcodec \
              -lavutil \
              -lswresample
 
-LIBS= -larena -lsave -lgentl $(GENICAMLIBS) $(FFMPEGLIBS) -lpthread -llucidlog
+LIBS = -larena -lsave -lgentl $(GENICAMLIBS) $(FFMPEGLIBS) -lpthread -llucidlog
+LIBS += `pkg-config opencv --libs --cflags` \
+        `pkg-config pcl_visualization-1.9 --libs --cflags` \
+        `pkg-config pcl_io-1.9 --libs --cflags` \
+        `pkg-config pcl_common-1.9 --libs --cflags` \
+        `pkg-config pcl_filters-1.9 --libs --cflags` \
+        -lvtkRenderingQt-6.3 \
+        -lvtkCommonDataModel-6.3 \
+        -lvtkCommonMath-6.3 \
+        -lvtkCommonCore-6.3 \
+        -lvtkViewsCore-6.3 \
+        -lvtkGUISupportQt-6.3 \
+        -lvtkRenderingCore-6.3 \
+        -lboost_system
 RM = rm -f
 
 SRCS = $(wildcard *.cpp)

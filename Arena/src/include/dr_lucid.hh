@@ -1,4 +1,3 @@
-// #include "stdafx.h"
 #include "GenTL.h"
 
 #include "ArenaApi.h"
@@ -13,19 +12,20 @@
 
 #include "ArenaApi.h"
 
-#include "opencv2\opencv.hpp"
-#include "opencv2\highgui.hpp"
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
-#include<pcl/io/pcd_io.h>
-#include<pcl/point_types.h>
+#include "pcl/io/pcd_io.h"
+#include "pcl/point_types.h"
 
 // store x, y, z data in mm and intensity for a given point
 struct PointData
 {
-	int16_t x;
-	int16_t y;
-	int16_t z;
-	int16_t intensity;
+	double x;
+	double y;
+	double z;
+	uint16_t intensity;
 };
 
 struct ColorInitialValue
@@ -87,6 +87,16 @@ struct DepthConfig
   bool spatial_filter_enable;
 };
 
+struct ScaleAndOffset
+{
+  double scaleX;
+  float offsetX;
+  double scaleY;
+  float offsetY;
+  double scaleZ;
+  float offsetZ;
+};
+
 class Lucid
 {
   public:
@@ -98,6 +108,7 @@ class Lucid
     ColorConfig colorConfig_;
     DepthConfig depthConfig_;
     int64_t fetch_frame_timeout_;
+    std::string save_path_ = "/home/bot/JHY/Captured_Images/";
 
     Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, ColorConfig colorConfig);
     Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, DepthConfig depthConfig);
@@ -108,12 +119,12 @@ class Lucid
     void GetAndSaveImage();
     void StartStream();
     void TriggerArming();
-    Arena::IImage *GetImage() const;
-    cv::Mat *ImageToCVMat(Arena::IImage *pImage);
-    cv::Mat *DepthToIntensityImage(Arena::IImage *pImage);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr DepthToPcd(Arena::IImage *pImage);
-    void SavePcd(pcl::PointCloud<pcl::PointXYZ>::Ptr);
-    void SaveCVMat(cv::Mat *cv_image, const char *filename)
+    Arena::IImage *GetImage();
+    cv::Mat ImageToCVMat(Arena::IImage *pImage);
+    cv::Mat DepthToIntensityImage(Arena::IImage *pImage);
+    pcl::PointCloud<pcl::PointXYZ> DepthToPcd(Arena::IImage *pImage);
+    void SavePcd(pcl::PointCloud<pcl::PointXYZ> ptcloud, std::string filename);
+    void SaveCVMat(cv::Mat cv_image, std::string filename);
     void StopStream();
 
   private:
@@ -123,6 +134,7 @@ class Lucid
     int counter_;
     ColorInitialValue colorInitialValue_;
     DepthInitialValue depthInitialValue_;
+    ScaleAndOffset scaleAndOffset_;
 
     void ConfigureHLTCamera();
     void ConfigurePHXCamera();
@@ -133,6 +145,6 @@ class Lucid
     void RequeueBuffer(Arena::IImage *pImage);
     void ReInitialDepthCamera();
     void ReInitialColorCamera();
-    std::vector<PointData> *ProcessDepthImage(Arena::IImage *pImage);
+    std::vector<PointData> ProcessDepthImage(Arena::IImage *pImage);
 };
 

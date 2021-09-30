@@ -1,10 +1,9 @@
-#include "stdafx.h"
-
 #include "include/dr_lucid.hh"
 
 #define TAB1 "  "
 #define TAB2 "    "
 #define TAB3 "        "
+#define TAB4 "            "
 
 // pixel format
 #define COLOR_PIXEL_FORMAT "BGR8"
@@ -138,14 +137,11 @@ void Lucid::SaveDepthImage(Arena::IImage *pImage, const char *filename)
 			filename);
 
 	// set default parameters for SetPly()
-	bool filterPoints = true;
-	float scale = SCALE;
-	float offsetA = OFFSET;
-	float offsetB = OFFSET;
-	float offsetC = OFFSET;
+	bool filterPoints = true; // default
+	scaleAndOffset_.offsetZ = 0.0f;	  // default
 
 	// set the output file format of the image writer to .ply
-	writer.SetPly(".ply", filterPoints, isSignedPixelFormat, scale, offsetA, offsetB, offsetC);
+	writer.SetPly(".ply", filterPoints, isSignedPixelFormat, scaleAndOffset_.scaleX, scaleAndOffset_.offsetX, scaleAndOffset_.offsetY, scaleAndOffset_.offsetZ);
 
 	// Save image
 	//    Passing image data into the image writer using the cascading I/O
@@ -407,6 +403,26 @@ void Lucid::ConfigureHLTCamera()
 			pDevice_->GetNodeMap(),
 			"TriggerSource",
 			"Software");
+
+	// get the coordinate scale in order to convert x, y and z values to mm as
+	// well as the offset for x and y to correctly adjust values when in an
+	// unsigned pixel format
+	std::cout << TAB1 << "Get xyz coordinate scales and offsets\n\n";
+
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "Scan3dCoordinateSelector", "CoordinateA");
+	// getting scaleX as float by casting since SetPly() will expect it passed as
+	// float
+	scaleAndOffset_.scaleX = static_cast<float>(Arena::GetNodeValue<double>(pDevice_->GetNodeMap(), "Scan3dCoordinateScale"));
+	// getting offsetX as float by casting since SetPly() will expect it passed
+	// as float
+	scaleAndOffset_.offsetX = static_cast<float>(Arena::GetNodeValue<double>(pDevice_->GetNodeMap(), "Scan3dCoordinateOffset"));
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "Scan3dCoordinateSelector", "CoordinateB");
+	scaleAndOffset_.scaleY = Arena::GetNodeValue<double>(pDevice_->GetNodeMap(), "Scan3dCoordinateScale");
+	// getting offsetY as float by casting since SetPly() will expect it passed
+	// as float
+	scaleAndOffset_.offsetY = static_cast<float>(Arena::GetNodeValue<double>(pDevice_->GetNodeMap(), "Scan3dCoordinateOffset"));
+	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "Scan3dCoordinateSelector", "CoordinateC");
+	scaleAndOffset_.scaleZ = Arena::GetNodeValue<double>(pDevice_->GetNodeMap(), "Scan3dCoordinateScale");
 
 	// enable stream auto negotiate packet size
 	Arena::SetNodeValue<bool>(
@@ -739,7 +755,7 @@ void Lucid::RequeueBuffer(Arena::IImage *pImage)
 	pDevice_->RequeueBuffer(pImage);
 }
 
-Arena::IImage *Lucid::GetImage() const
+Arena::IImage *Lucid::GetImage()
 {
 	// Trigger an image
 	//    Trigger an image manually, since trigger mode is enabled. This triggers
@@ -757,7 +773,7 @@ Arena::IImage *Lucid::GetImage() const
 			"TriggerSoftware");
 
 	std::cout << TAB2 << "Get image";
-	*pImage = *pDevice_->GetImage(fetch_frame_timeout_);
+	Arena::IImage *pImage = pDevice_->GetImage(fetch_frame_timeout_);
 	std::cout << " (" << pImage->GetWidth() << "x" << pImage->GetHeight() << ")\n";
 
 	RequeueBuffer(pImage);
@@ -765,58 +781,41 @@ Arena::IImage *Lucid::GetImage() const
 	return pImage;
 }
 
-cv::Mat *Lucid::ImageToCVMat(Arena::IImage *pImage)
+cv::Mat Lucid::ImageToCVMat(Arena::IImage *pImage)
 {
 	if (pixelFormat_ == COLOR_PIXEL_FORMAT)
 	{
-		auto pConverted = Arena::ImageFactory::Convert(pImage, COLOR_PIXEL_FORMAT);
-		cv::Mat *cv_image = cv::Mat((int)pConverted->GetHeight(), (int)pConverted->GetWidth(), CV_8UC3, (void*)pConverted->GetData());
+		auto pConverted = Arena::ImageFactory::Convert(pImage, BGR8);
+		cv::Mat cv_image = cv::Mat((int)pConverted->GetHeight(), (int)pConverted->GetWidth(), CV_8UC3, (void*)pConverted->GetData());
 		return cv_image;
 	}else if (pixelFormat_ == INTENSITY_PIXEL_FORMAT)
 	{
-		cv::Mat *cv_image = cv::Mat((int)pImage->GetHeight(), (int)pImage->GetWidth(), CV_8UC1, (void*)pImage->GetData());
+		cv::Mat cv_image = cv::Mat((int)pImage->GetHeight(), (int)pImage->GetWidth(), CV_8UC1, (void*)pImage->GetData());
 		return cv_image;
 	}else if (pixelFormat_ == DEPTH_PIXEL_FORMAT)
 	{
-		cv::Mat *cv_image = cv::Mat((int)pImage->GetHeight(), (int)pImage->GetWidth(), CV_32FC3, (uint16_t*)pImage->GetData());
+		cv::Mat cv_image = cv::Mat((int)pImage->GetHeight(), (int)pImage->GetWidth(), CV_32FC3, (uint16_t*)pImage->GetData());
 		return cv_image;
 	}else
 	{
 		// EXCEPTION
-		return;
+		cv::Mat excep(1, 1, CV_8UC1, cv::Scalar::all(0));
+		return excep;
 	}
 }
 
-std::vector<PointData> *Lucid::ProcessDepthImage(Arena::IImage *pImage)
+std::vector<PointData> Lucid::ProcessDepthImage(Arena::IImage *pImage)
 {
+	std::cout << TAB4 << "Ready to process depth image..." << std::endl;
+
 	if (pixelFormat_ != DEPTH_PIXEL_FORMAT)
 	{
 		// EXCEPTION
-		return;
+		std::vector<PointData> excep;
+		return excep;
 	}
 
-	std::vector<PointData> *cloud_points;
-
-	GenApi::INodeMap* pNodeMap = pDevice_->GetNodeMap();
-	// get the coordinate scale in order to convert x, y and z values to mm as
-	// well as the offset for x and y to correctly adjust values when in an
-	// unsigned pixel format
-	std::cout << TAB1 << "Get xyz coordinate scales and offsets\n\n";
-
-	Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "Scan3dCoordinateSelector", "CoordinateA");
-	// getting scaleX as float by casting since SetPly() will expect it passed as
-	// float
-	float scaleX = static_cast<float>(Arena::GetNodeValue<double>(pNodeMap, "Scan3dCoordinateScale"));
-	// getting offsetX as float by casting since SetPly() will expect it passed
-	// as float
-	float offsetX = static_cast<float>(Arena::GetNodeValue<double>(pNodeMap, "Scan3dCoordinateOffset"));
-	Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "Scan3dCoordinateSelector", "CoordinateB");
-	double scaleY = Arena::GetNodeValue<double>(pNodeMap, "Scan3dCoordinateScale");
-	// getting offsetY as float by casting since SetPly() will expect it passed
-	// as float
-	float offsetY = static_cast<float>(Arena::GetNodeValue<double>(pNodeMap, "Scan3dCoordinateOffset"));
-	Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "Scan3dCoordinateSelector", "CoordinateC");
-	double scaleZ = Arena::GetNodeValue<double>(pNodeMap, "Scan3dCoordinateScale");
+	std::vector<PointData> cloud_points;
 
 	// prepare info from input buffer
 	size_t width = pImage->GetWidth();
@@ -828,7 +827,7 @@ std::vector<PointData> *Lucid::ProcessDepthImage(Arena::IImage *pImage)
 	const uint8_t* pIn = pInput;
 
 	for (size_t i = 0; i < size; i++)
-	{
+	{	
 		// Extract point data to signed 16 bit integer
 		//    The first channel is the x coordinate, second channel is the y
 		//    coordinate, the third channel is the z coordinate and the
@@ -842,46 +841,50 @@ std::vector<PointData> *Lucid::ProcessDepthImage(Arena::IImage *pImage)
 
 		// if z is less than max value, as invalid values get filtered to
 		// 65535
-		if (z < 65535)
-		{
+		//if (z < 65535)
+		//{
 			// Convert x, y and z to millimeters
 			//    Using each coordinates' appropriate scales, convert x, y
 			//    and z values to mm. For the x and y coordinates in an
 			//    unsigned pixel format, we must then add the offset to our
 			//    converted values in order to get the correct position in
 			//    millimeters.
-			x = uint16_t(double(x) * scaleX + offsetX);
-			y = uint16_t(double(y) * scaleY + offsetY);
-			z = uint16_t(double(z) * scaleZ);
-		}
+		double xSigned = double(x) * scaleAndOffset_.scaleX + scaleAndOffset_.offsetX;
+		double ySigned = double(y) * scaleAndOffset_.scaleY + scaleAndOffset_.offsetY;
+		double zSigned = double(z) * scaleAndOffset_.scaleZ;
 
 		PointData point = {
-			x: x,
-			y: y,
-			z: z,
+			x: xSigned,
+			y: ySigned,
+			z: zSigned,
 			intensity: intensity
 		};
 
 		cloud_points.push_back(point);
+		//}
 
 		pIn += srcPixelSize;
 	}
+
+	std::cout << TAB4 << "Process finished" << std::endl;
+
 	return cloud_points;
 }
 
-cv::Mat *Lucid::DepthToIntensityImage(Arena::IImage *pImage)
+cv::Mat Lucid::DepthToIntensityImage(Arena::IImage *pImage)
 {	
 	if (pixelFormat_ != DEPTH_PIXEL_FORMAT)
 	{
 		// EXCEPTION
-		return;
+		cv::Mat excep(1, 1, CV_8UC1, cv::Scalar::all(0));
+		return excep;
 	}
 
-	size_t height = (int)pImage->GetHeight();
-	size_t width = (int)pImage->GetWidth();
+	int height = (int)pImage->GetHeight();
+	int width = (int)pImage->GetWidth();
 	
-	std::vector<PointData> *data_points = ProcessDepthImage(pImage);
-	cv::Mat *cv_image(height, width, CV_8UC1, cv::Scalar::all(0));
+	std::vector<PointData> data_points = ProcessDepthImage(pImage);
+	cv::Mat cv_image(height, width, CV_8UC1, cv::Scalar::all(0));
 
 	uchar *pointer;
 	uint64_t counter = 0;
@@ -898,44 +901,55 @@ cv::Mat *Lucid::DepthToIntensityImage(Arena::IImage *pImage)
 	return cv_image;
 }
 
-pcl::PointCloud<pcl::PointXYZ>::Ptr Lucid::DepthToPcd(Arena::IImage *pImage)
+pcl::PointCloud<pcl::PointXYZ> Lucid::DepthToPcd(Arena::IImage *pImage)
 {
 	if (pixelFormat_ != DEPTH_PIXEL_FORMAT)
 	{
 		// EXCEPTION
-		return;
+		pcl::PointCloud<pcl::PointXYZ> excep;
+		return excep;
 	}
 
-	std::vector<PointData> *data_points = ProcessDepthImage(pImage);
-	pcl::PointCloud<pcl::PointXYZ>::Ptr ptcloud(new pcl::PointCloud<pcl::PointXYZ>);
+	std::vector<PointData> data_points = ProcessDepthImage(pImage);
+	pcl::PointCloud<pcl::PointXYZ> ptcloud;
 
-	for (auto point : data_points)
-	{
+	for (long unsigned int i=0; i<data_points.size(); ++i)
+	{	
+		PointData data_point = data_points[i];
 		pcl::PointXYZ pt;
-		pt.x = point.x;
-		pt.y = point.y;
-		pt.z = point.z;
-		ptcloud->points.push_back(pt);
+		pt.x = data_point.x;
+		pt.y = data_point.y;
+		pt.z = data_point.z;
+		ptcloud.points.push_back(pt);
 	}
+
+	ptcloud.height = 1;
+	ptcloud.width = data_points.size();
+
+	std::cout << TAB4 << "PCL point cloud generated" << std::endl;
 
 	return ptcloud;
 };
 
-void Lucid::SavePcd(pcl::PointCloud<pcl::PointXYZ>::Ptr ptcloud, const char *filename)
+void Lucid::SavePcd(pcl::PointCloud<pcl::PointXYZ> ptcloud, std::string filename)
 {
-	std::cout << TAB3 << "Save image\n";
+	std::cout << TAB3 << "Save pcd image to " << filename << std::endl;
 
 	pcl::io::savePCDFileASCII(filename, ptcloud);
 }
 
-void Lucid::SaveCVMat(cv::Mat *cv_image, const char *filename)
+void Lucid::SaveCVMat(cv::Mat cv_image, std::string filename)
 {
-	if (cv_image.type().channels() == 0) || (cv_image.type().channels() == 16)
+	std::cout << TAB3 << "Save cv matrix to " << filename << std::endl;
+
+	if ((cv_image.type() == 0) || (cv_image.type() == 16))
 	{
 		cv::imwrite(filename, cv_image);
-	}else if (cv_image.type().channels() == 21)
+	}else if (cv_image.type() == 21)
 	{
-		// SAVE DEPTH
+		// DEPTH cannot save
+		std::cout << "If you want to save depth image, please use DepthToPcd() and SavePcd()" << std::endl;
+		return;
 	}
 }
 
@@ -959,24 +973,26 @@ void Lucid::GetAndSaveImage()
 	
 	if (pixelFormat_ == COLOR_PIXEL_FORMAT)
 	{
-		filename = "/home/bot/JHY/lucid_test_WS/ArenaSDK_v0.1.54_Linux_x64/ArenaSDK_TEST/Captured_Images/Color_Images/" + filename + ".png";
+		filename = save_path_ + "Color_Images/" + filename + ".png";
 		// SaveColorImage(pImage_, filename.c_str());
-		SaveCVMat(ImageToCVMat(pImage), filename.c_str());
+		SaveCVMat(ImageToCVMat(pImage_), filename);
 		std::cout << TAB2 << "save " << filename << "\n";
 	}
 	else if (pixelFormat_ == DEPTH_PIXEL_FORMAT)
 	{
-		filename = "/home/bot/JHY/lucid_test_WS/ArenaSDK_v0.1.54_Linux_x64/ArenaSDK_TEST/Captured_Images/Depth_Images/" + filename;
-		filename = filename + ".pcd";
-		SavePcd(DepthToPcd(pImage_), filename.c_str());
+		filename = save_path_ + "Depth_Images/" + filename;
+		std::string pcd_filename = filename + ".pcd";
+		std::string intensity_filename = filename + ".png";
+		SavePcd(DepthToPcd(pImage_), pcd_filename);
+		SaveCVMat(DepthToIntensityImage(pImage_), intensity_filename);
 		// SaveDepthImage(pImage_, filename.c_str());
 		std::cout << TAB2 << "save " << filename << "\n";
 	}
 	else if (pixelFormat_ == INTENSITY_PIXEL_FORMAT)
 	{
-		filename = "/home/bot/JHY/lucid_test_WS/ArenaSDK_v0.1.54_Linux_x64/ArenaSDK_TEST/Captured_Images/Intensity_Images/" + filename + ".png";
+		filename = save_path_ + "Intensity_Images/" + filename + ".png";
 		// SaveIntensityImage(pImage_, filename.c_str());
-		SaveCVMat(ImageToCVMat(pImage), filename.c_str());
+		SaveCVMat(ImageToCVMat(pImage_), filename);
 		std::cout << TAB2 << "save " << filename << "\n";
 	}
 
