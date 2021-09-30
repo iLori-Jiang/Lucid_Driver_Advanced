@@ -1,5 +1,8 @@
 # include "include/dr_lucid_manager.hh"
 
+/**
+ * @brief constructor for lucid manager
+ */
 LucidManager::LucidManager()
 {
   // prepare devices
@@ -24,17 +27,25 @@ LucidManager::LucidManager()
 	}
 }
 
+/**
+ * @brief deconstrucot for lucid camera
+ */
 LucidManager::~LucidManager()
 {
   Arena::CloseSystem(pSystem_);
 }
 
+/**
+ * @brief set up certain color camera based on the config
+ */
 Lucid *LucidManager::CreateDevice(ColorConfig colorConfig)
 { 
+  // use iterator to find the devie based on mac address
   std::map<std::string, Arena::DeviceInfo>::iterator it;
   it = deviceList_.find(colorConfig.macAddress);
   if (it != deviceList_.end())
   {
+    // create camera device
     Arena::IDevice *pDevice = pSystem_->CreateDevice(it->second);
     Lucid *lucid = new Lucid(pDevice, pSystem_, colorConfig);
     activeDeviceList_.push_back(lucid);
@@ -45,12 +56,17 @@ Lucid *LucidManager::CreateDevice(ColorConfig colorConfig)
   }
 }
 
+/**
+ * @brief set up certain depth camera based on the config
+ */
 Lucid *LucidManager::CreateDevice(DepthConfig depthConfig)
-{ 
+{
+  // use iterator to find the devie based on mac address
   std::map<std::string, Arena::DeviceInfo>::iterator it;
   it = deviceList_.find(depthConfig.macAddress);
   if (it != deviceList_.end())
   {
+    // create camera device
     Arena::IDevice *pDevice = pSystem_->CreateDevice(it->second);
     Lucid *lucid = new Lucid(pDevice, pSystem_, depthConfig);
     activeDeviceList_.push_back(lucid);
@@ -61,6 +77,9 @@ Lucid *LucidManager::CreateDevice(DepthConfig depthConfig)
   }
 }
 
+/**
+ * @brief get the certain device based on its mac address
+ */
 Lucid *LucidManager::GetDevice(std::string macAddress)
 {
   for (uint8_t i=0; i<activeDeviceList_.size(); ++i)
@@ -74,6 +93,9 @@ Lucid *LucidManager::GetDevice(std::string macAddress)
   return NULL;
 }
 
+/**
+ * @brief destory the certain device based on its mac address
+ */
 bool LucidManager::DestoryDevice(std::string macAddress)
 {
   for (uint8_t i=0; i<activeDeviceList_.size(); ++i)
@@ -89,6 +111,9 @@ bool LucidManager::DestoryDevice(std::string macAddress)
   return false;
 }
 
+/**
+ * @brief destory all the active devices
+ */
 bool LucidManager::DestoryAllDevice()
 {
   for (uint8_t i=0; i<activeDeviceList_.size(); ++i)

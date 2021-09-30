@@ -5,6 +5,7 @@ int main()
   bool exceptionThrown = false;
 
 	// load config
+
 	// color config
 	ColorConfig colorConfig={
 		fps: 5,
@@ -12,7 +13,7 @@ int main()
 		fetch_frame_timeout: 2000,
 		macAddress: "1c:0f:af:0c:85:61",
 		resolution: 1280,
-		pixel_format: "rgb",
+		pixel_format: "gray",
 		exposure_auto: true,
 		exposure_time: 18111.9,
 		gain_auto: true,
@@ -31,7 +32,7 @@ int main()
 		macAddress: "1c:0f:af:00:46:6f",
 		resolution: 640,
 		exposure_time: 1000,
-		pixel_format: "cloud",
+		pixel_format: "gray",
 		detect_range: 3000,
 		detect_distance_min: 1000,
 		amplitude_gain: 30,
@@ -46,20 +47,22 @@ int main()
 
   try
   {
+		// set up lucid manager
     LucidManager *lucidManager = new LucidManager();
 
-    // Lucid *helios = lucidManager->CreateDevice("1c:0f:af:00:46:6f", "Coord3D_ABCY16");
-		// Lucid *phoneix = lucidManager->CreateDevice("1c:0f:af:0c:85:61", "BGR8");
-		// Lucid *triton = lucidManager->CreateDevice("1c:0f:af:00:32:32", "BGR8");
+		// set up lucid camera
 		Lucid *phoneix = lucidManager->CreateDevice(colorConfig);
 		Lucid *helios = lucidManager->CreateDevice(depthConfig);
 
+		// configure and start camera
     helios->ConfigureCamera();
     helios->StartStream();
 		phoneix->ConfigureCamera();
 		phoneix->StartStream();
 		// triton->ConfigureCamera();
 		// triton->StartStream();
+
+		// take images
 
 		//while (true)
 		//{
@@ -74,6 +77,7 @@ int main()
 			// triton->GetAndSaveImage();
 		//}
 
+		// stop camera
     helios->StopStream();
 		phoneix->StopStream();
 		// triton->StopStream();

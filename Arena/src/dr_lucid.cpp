@@ -10,14 +10,16 @@
 #define DEPTH_PIXEL_FORMAT "Coord3D_ABCY16"
 #define INTENSITY_PIXEL_FORMAT "Mono8"
 
-// scale and offset of the image
+// default scale and offset of the camera
 #define SCALE 0.25f
 #define OFFSET 0.00f
 
+/**
+ * @brief constructor for color camera
+ */
 Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, ColorConfig colorConfig)
 {
 	colorConfig_ = colorConfig;
-
 	macAddress_ = colorConfig.macAddress;
 	fetch_frame_timeout_ = colorConfig.fetch_frame_timeout;
 
@@ -26,6 +28,7 @@ Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, ColorConfig color
 	pSystem_ = pSystem;
 	counter_ = 0;
 
+	// assign pixel format
 	if (colorConfig.pixel_format == "rgb"){pixelFormat_ = COLOR_PIXEL_FORMAT;}
 	else if (colorConfig.pixel_format == "gray"){pixelFormat_ = INTENSITY_PIXEL_FORMAT;}
 	else {
@@ -33,7 +36,7 @@ Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, ColorConfig color
 		return;
 	}
 
-	// assign camera type
+	// assign camera type and family
 	GenICam::gcstring deviceModelName = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "DeviceModelName");
 	deviceModelName_ = deviceModelName.c_str();
 	if (deviceModelName_.rfind("PHX", 0) == 0)
@@ -56,10 +59,12 @@ Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, ColorConfig color
 	std::cout << "Type of current selected device is: "<< deviceType_ << std::endl << std::endl;
 }
 
+/**
+ * @brief constructor for depth camera
+ */
 Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, DepthConfig depthConfig)
 {
 	depthConfig_ = depthConfig;
-
 	macAddress_ = depthConfig.macAddress;
 	fetch_frame_timeout_ = depthConfig.fetch_frame_timeout;
 
@@ -68,6 +73,7 @@ Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, DepthConfig depth
 	pSystem_ = pSystem;
 	counter_ = 0;
 
+	// assign pixel format
 	if (depthConfig.pixel_format == "cloud"){pixelFormat_ = DEPTH_PIXEL_FORMAT;}
 	else if (depthConfig.pixel_format == "gray"){pixelFormat_ = INTENSITY_PIXEL_FORMAT;}
 	else {
@@ -75,7 +81,7 @@ Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, DepthConfig depth
 		return;
 	}
 
-	// assign camera type
+	// assign camera type and family
 	GenICam::gcstring deviceModelName = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "DeviceModelName");
 	deviceModelName_ = deviceModelName.c_str();
 	if (deviceModelName_.rfind("HLT", 0) == 0)
@@ -93,16 +99,25 @@ Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, DepthConfig depth
 	std::cout << "Type of current selected device is: "<< deviceType_ << std::endl << std::endl;
 }
 
+/**
+ * @brief camera deconstructor
+ */
 Lucid::~Lucid()
 {
 	pSystem_->DestroyDevice(pDevice_);
 }
 
+/**
+ * @brief provide the private attribute for outer use
+ */
 Arena::IDevice *Lucid::GetDevice()
 {
 	return pDevice_;
 }
 
+/**
+ * @brief save depth image, OFFICIAL FUNCTION
+ */
 void Lucid::SaveDepthImage(Arena::IImage *pImage, const char *filename)
 {
 	bool isSignedPixelFormat = false;
@@ -153,6 +168,9 @@ void Lucid::SaveDepthImage(Arena::IImage *pImage, const char *filename)
 	writer << pImage->GetData();
 }
 
+/**
+ * @brief save color image, OFFICIAL FUNCTION
+ */
 void Lucid::SaveColorImage(Arena::IImage *pImage, const char *filename)
 {
 	// Convert image
@@ -200,9 +218,12 @@ void Lucid::SaveColorImage(Arena::IImage *pImage, const char *filename)
 	Arena::ImageFactory::Destroy(pConverted);
 }
 
+/**
+ * @brief save intensity image, OFFICIAL FUNCTION
+ */
 void Lucid::SaveIntensityImage(Arena::IImage *pImage, const char *filename)
 {	
-	// If the image in complete
+	// check if the image in complete
 	if (pImage->IsIncomplete())
 	{
 		std::cout << "This image is incomplete!" << std::endl;
@@ -242,17 +263,22 @@ void Lucid::SaveIntensityImage(Arena::IImage *pImage, const char *filename)
 	writer << pImage->GetData();
 }
 
+/**
+ * @brief configure Helios2 camera
+ * @warning might occur error configuring other depth camera, with different config parameter
+ */
 void Lucid::ConfigureHLTCamera()
 {
 	// get node values that will be changed in order to return their values at
-	// the end of the example
+	// the end of the program
 	depthInitialValue_.triggerSelectorInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSelector");
 	depthInitialValue_.triggerModeInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerMode");
 	depthInitialValue_.triggerSourceInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSource");
-	depthInitialValue_.pixelFormatInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "PixelFormat");;
+	depthInitialValue_.pixelFormatInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "PixelFormat");
+	depthInitialValue_.operatingModeInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "Scan3dOperatingMode");
 
 	// validate if Scan3dCoordinateSelector node exists. If not - probaly not
-	// Helios camera used running the example
+	// Helios camera used running the program
 	GenApi::CEnumerationPtr checkpCoordSelector = pDevice_->GetNodeMap()->GetNode("Scan3dCoordinateSelector");
 	if (!checkpCoordSelector)
 	{
@@ -271,9 +297,6 @@ void Lucid::ConfigureHLTCamera()
 		return;
 	}
 
-	// get node values that will be changed in order to return their values at the end of the example	  
-	depthInitialValue_.operatingModeInitial = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "Scan3dOperatingMode");
-	
 	// Set pixel format
 	// Warning: HLT003S-001 / Helios2 - has only Coord3D_ABCY16 in this case
 	//    This example demonstrates data interpretation for both a signed or
@@ -404,39 +427,39 @@ void Lucid::ConfigureHLTCamera()
 			"TriggerSource",
 			"Software");
 
-	// get the coordinate scale in order to convert x, y and z values to mm as
+	// Get the coordinate scale in order to convert x, y and z values to mm as
 	// well as the offset for x and y to correctly adjust values when in an
 	// unsigned pixel format
 	std::cout << TAB1 << "Get xyz coordinate scales and offsets\n\n";
 
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "Scan3dCoordinateSelector", "CoordinateA");
-	// getting scaleX as float by casting since SetPly() will expect it passed as
-	// float
+	// getting scaleX as float by casting since SetPly() will expect it passed as float
 	scaleAndOffset_.scaleX = static_cast<float>(Arena::GetNodeValue<double>(pDevice_->GetNodeMap(), "Scan3dCoordinateScale"));
-	// getting offsetX as float by casting since SetPly() will expect it passed
-	// as float
+	// getting offsetX as float by casting since SetPly() will expect it passed as float
 	scaleAndOffset_.offsetX = static_cast<float>(Arena::GetNodeValue<double>(pDevice_->GetNodeMap(), "Scan3dCoordinateOffset"));
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "Scan3dCoordinateSelector", "CoordinateB");
 	scaleAndOffset_.scaleY = Arena::GetNodeValue<double>(pDevice_->GetNodeMap(), "Scan3dCoordinateScale");
-	// getting offsetY as float by casting since SetPly() will expect it passed
-	// as float
+	// getting offsetY as float by casting since SetPly() will expect it passed as float
 	scaleAndOffset_.offsetY = static_cast<float>(Arena::GetNodeValue<double>(pDevice_->GetNodeMap(), "Scan3dCoordinateOffset"));
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "Scan3dCoordinateSelector", "CoordinateC");
 	scaleAndOffset_.scaleZ = Arena::GetNodeValue<double>(pDevice_->GetNodeMap(), "Scan3dCoordinateScale");
 
-	// enable stream auto negotiate packet size
+	// Enable stream auto negotiate packet size
 	Arena::SetNodeValue<bool>(
 		pDevice_->GetTLStreamNodeMap(),
 		"StreamAutoNegotiatePacketSize",
 		true);
 
-	// enable stream packet resend
+	// Enable stream packet resend
 	Arena::SetNodeValue<bool>(
 		pDevice_->GetTLStreamNodeMap(),
 		"StreamPacketResendEnable",
 		true);
 }
 
+/**
+ * @brief configure Phoenix camera
+ */
 void Lucid::ConfigurePHXCamera()
 {
 	// get node values that will be changed in order to return their values at
@@ -577,6 +600,9 @@ void Lucid::ConfigurePHXCamera()
 		true);
 }
 
+/**
+ * @brief configure Triton camera
+ */
 void Lucid::ConfigureTRICamera()
 {
 	// get node values that will be changed in order to return their values at
@@ -717,6 +743,10 @@ void Lucid::ConfigureTRICamera()
 		true);
 }
 
+/**
+ * @brief automatically decide which camera to configure according to its family
+ * @warning currently only support Helios, Phoenix, and Triton
+ */
 void Lucid::ConfigureCamera()
 {
 	if (deviceFamily_ == "Helios"){ConfigureHLTCamera();}
@@ -728,11 +758,18 @@ void Lucid::ConfigureCamera()
 	}
 }
 
+/**
+ * @brief camera should start stream first and then begin job on taking images
+ * @warning all the configuration should be done before this step
+ */
 void Lucid::StartStream()
 {
 	pDevice_->StartStream();
 }
 
+/**
+ * @brief before the camera take a image, it should arm its trigger and then shot the image
+ */
 void Lucid::TriggerArming()
 {
 	// Trigger Armed
@@ -747,6 +784,9 @@ void Lucid::TriggerArming()
 	} while (triggerArmed == false);
 }
 
+/**
+ * @brief after the camera take a image, it should requeue that image
+ */
 void Lucid::RequeueBuffer(Arena::IImage *pImage)
 {
 	// requeue buffer
@@ -755,6 +795,9 @@ void Lucid::RequeueBuffer(Arena::IImage *pImage)
 	pDevice_->RequeueBuffer(pImage);
 }
 
+/**
+ * @brief let the camera get the image, and return it
+ */
 Arena::IImage *Lucid::GetImage()
 {
 	// Trigger an image
@@ -781,22 +824,33 @@ Arena::IImage *Lucid::GetImage()
 	return pImage;
 }
 
+/**
+ * @brief transform image to cv::Mat
+ */
 cv::Mat Lucid::ImageToCVMat(Arena::IImage *pImage)
 {
+	// Transform the image based on the pixel format
 	if (pixelFormat_ == COLOR_PIXEL_FORMAT)
-	{
+	{	
+		// Convert the image
 		auto pConverted = Arena::ImageFactory::Convert(pImage, BGR8);
+		// Transformation to format CV_8UC3, 8 bit unsigned int, 3 channels
 		cv::Mat cv_image = cv::Mat((int)pConverted->GetHeight(), (int)pConverted->GetWidth(), CV_8UC3, (void*)pConverted->GetData());
 		return cv_image;
-	}else if (pixelFormat_ == INTENSITY_PIXEL_FORMAT)
+	}
+	else if (pixelFormat_ == INTENSITY_PIXEL_FORMAT)
 	{
+		// Transformation to format CV_8UC1, 8 bit unsigned int, 1 channels
 		cv::Mat cv_image = cv::Mat((int)pImage->GetHeight(), (int)pImage->GetWidth(), CV_8UC1, (void*)pImage->GetData());
 		return cv_image;
-	}else if (pixelFormat_ == DEPTH_PIXEL_FORMAT)
+	}
+	else if (pixelFormat_ == DEPTH_PIXEL_FORMAT)
 	{
+		// Transformation to format CV_32FC3, 32 bit float, 3 channels
 		cv::Mat cv_image = cv::Mat((int)pImage->GetHeight(), (int)pImage->GetWidth(), CV_32FC3, (uint16_t*)pImage->GetData());
 		return cv_image;
-	}else
+	}
+	else
 	{
 		// EXCEPTION
 		cv::Mat excep(1, 1, CV_8UC1, cv::Scalar::all(0));
@@ -804,6 +858,9 @@ cv::Mat Lucid::ImageToCVMat(Arena::IImage *pImage)
 	}
 }
 
+/**
+ * @brief traverse all the points in the depth image, and store them using PointData vector
+ */
 std::vector<PointData> Lucid::ProcessDepthImage(Arena::IImage *pImage)
 {
 	std::cout << TAB4 << "Ready to process depth image..." << std::endl;
@@ -815,6 +872,7 @@ std::vector<PointData> Lucid::ProcessDepthImage(Arena::IImage *pImage)
 		return excep;
 	}
 
+	// initial vector
 	std::vector<PointData> cloud_points;
 
 	// prepare info from input buffer
@@ -826,6 +884,7 @@ std::vector<PointData> Lucid::ProcessDepthImage(Arena::IImage *pImage)
 	const uint8_t* pInput = pImage->GetData();
 	const uint8_t* pIn = pInput;
 
+	// traverse the points
 	for (size_t i = 0; i < size; i++)
 	{	
 		// Extract point data to signed 16 bit integer
@@ -843,12 +902,13 @@ std::vector<PointData> Lucid::ProcessDepthImage(Arena::IImage *pImage)
 		// 65535
 		//if (z < 65535)
 		//{
-			// Convert x, y and z to millimeters
-			//    Using each coordinates' appropriate scales, convert x, y
-			//    and z values to mm. For the x and y coordinates in an
-			//    unsigned pixel format, we must then add the offset to our
-			//    converted values in order to get the correct position in
-			//    millimeters.
+
+		// Convert x, y and z to millimeters
+		//    Using each coordinates' appropriate scales, convert x, y
+		//    and z values to mm. For the x and y coordinates in an
+		//    unsigned pixel format, we must then add the offset to our
+		//    converted values in order to get the correct position in
+		//    millimeters.
 		double xSigned = double(x) * scaleAndOffset_.scaleX + scaleAndOffset_.offsetX;
 		double ySigned = double(y) * scaleAndOffset_.scaleY + scaleAndOffset_.offsetY;
 		double zSigned = double(z) * scaleAndOffset_.scaleZ;
@@ -863,6 +923,7 @@ std::vector<PointData> Lucid::ProcessDepthImage(Arena::IImage *pImage)
 		cloud_points.push_back(point);
 		//}
 
+		// loop increment
 		pIn += srcPixelSize;
 	}
 
@@ -871,6 +932,9 @@ std::vector<PointData> Lucid::ProcessDepthImage(Arena::IImage *pImage)
 	return cloud_points;
 }
 
+/**
+ * @brief transform depth image to intensity image, using intensity information from Coord3D_ABCY16 format
+ */
 cv::Mat Lucid::DepthToIntensityImage(Arena::IImage *pImage)
 {	
 	if (pixelFormat_ != DEPTH_PIXEL_FORMAT)
@@ -880,27 +944,33 @@ cv::Mat Lucid::DepthToIntensityImage(Arena::IImage *pImage)
 		return excep;
 	}
 
+	// initial cv::Mat
 	int height = (int)pImage->GetHeight();
 	int width = (int)pImage->GetWidth();
-	
-	std::vector<PointData> data_points = ProcessDepthImage(pImage);
 	cv::Mat cv_image(height, width, CV_8UC1, cv::Scalar::all(0));
 
-	uchar *pointer;
-	uint64_t counter = 0;
+	// get the PointData vector from the image
+	std::vector<PointData> data_points = ProcessDepthImage(pImage);
+
+	// traverse
+	uchar *pointer;					// tool for cv::Mat traverse
+	uint64_t counter = 0;		// counter for points
 	for (int i=0; i<height; ++i)
 	{
 		pointer = cv_image.ptr(i);
 		for (int j=0; j<width; ++j)
-		{
+		{	
+			// assign intensity information
 			pointer[j] = data_points[counter].intensity;
 			counter += 1;
 		}
 	}
-
 	return cv_image;
 }
 
+/**
+ * @brief transform depth image to pcl pointcloud
+ */
 pcl::PointCloud<pcl::PointXYZ> Lucid::DepthToPcd(Arena::IImage *pImage)
 {
 	if (pixelFormat_ != DEPTH_PIXEL_FORMAT)
@@ -910,11 +980,14 @@ pcl::PointCloud<pcl::PointXYZ> Lucid::DepthToPcd(Arena::IImage *pImage)
 		return excep;
 	}
 
+	// get the PointData vector from the image
 	std::vector<PointData> data_points = ProcessDepthImage(pImage);
+	// initial pcl pointcloud
 	pcl::PointCloud<pcl::PointXYZ> ptcloud;
 
+	// traverse assign the information of each point
 	for (long unsigned int i=0; i<data_points.size(); ++i)
-	{	
+	{
 		PointData data_point = data_points[i];
 		pcl::PointXYZ pt;
 		pt.x = data_point.x;
@@ -923,6 +996,7 @@ pcl::PointCloud<pcl::PointXYZ> Lucid::DepthToPcd(Arena::IImage *pImage)
 		ptcloud.points.push_back(pt);
 	}
 
+	// assign the size of the pointcloud
 	ptcloud.height = 1;
 	ptcloud.width = data_points.size();
 
@@ -931,6 +1005,9 @@ pcl::PointCloud<pcl::PointXYZ> Lucid::DepthToPcd(Arena::IImage *pImage)
 	return ptcloud;
 };
 
+/**
+ * @brief save pcl pointcloud to .pcd file
+ */
 void Lucid::SavePcd(pcl::PointCloud<pcl::PointXYZ> ptcloud, std::string filename)
 {
 	std::cout << TAB3 << "Save pcd image to " << filename << std::endl;
@@ -938,10 +1015,15 @@ void Lucid::SavePcd(pcl::PointCloud<pcl::PointXYZ> ptcloud, std::string filename
 	pcl::io::savePCDFileASCII(filename, ptcloud);
 }
 
+/**
+ * @brief save cv::Mat to .png file
+ * @warning only save color or gray(intensity) image
+ */
 void Lucid::SaveCVMat(cv::Mat cv_image, std::string filename)
 {
 	std::cout << TAB3 << "Save cv matrix to " << filename << std::endl;
 
+	// if the image is 8U3C(color) or 8U1C(intensity)
 	if ((cv_image.type() == 0) || (cv_image.type() == 16))
 	{
 		cv::imwrite(filename, cv_image);
@@ -953,6 +1035,9 @@ void Lucid::SaveCVMat(cv::Mat cv_image, std::string filename)
 	}
 }
 
+/**
+ * @brief ask the camera to get and save image automatically
+ */
 void Lucid::GetAndSaveImage()
 {	
 	// Get image
@@ -968,9 +1053,11 @@ void Lucid::GetAndSaveImage()
 	pImage_ = pDevice_->GetImage(fetch_frame_timeout_);
 	std::cout << " (" << pImage_->GetWidth() << "x" << pImage_->GetHeight() << ")\n";
 	
+	// Prepare the filename
 	std::string timestamp = std::to_string(pImage_->GetTimestampNs());
 	std::string filename = deviceFamily_ + "_" + timestamp + "_" + std::to_string(counter_++);
 	
+	// Save image based on the pixel format
 	if (pixelFormat_ == COLOR_PIXEL_FORMAT)
 	{
 		filename = save_path_ + "Color_Images/" + filename + ".png";
@@ -991,20 +1078,20 @@ void Lucid::GetAndSaveImage()
 	else if (pixelFormat_ == INTENSITY_PIXEL_FORMAT)
 	{
 		filename = save_path_ + "Intensity_Images/" + filename + ".png";
-		// SaveIntensityImage(pImage_, filename.c_str());
 		SaveCVMat(ImageToCVMat(pImage_), filename);
+		// SaveIntensityImage(pImage_, filename.c_str());
 		// std::cout << TAB2 << "save " << filename << "\n";
 	}
 
-	// requeue buffer
-	std::cout << TAB2 << "Requeue buffer\n";
-
-	pDevice_->RequeueBuffer(pImage_);
+	// requeue image buffer
+	RequeueBuffer(pImage_);
 }
 
+/**
+ * @brief return nodes to their initial values of depth camera
+ */
 void Lucid::ReInitialDepthCamera()
 {
-	// return nodes to their initial values
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSource", depthInitialValue_.triggerSourceInitial);
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerMode", depthInitialValue_.triggerModeInitial);
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSelector", depthInitialValue_.triggerSelectorInitial);
@@ -1014,9 +1101,11 @@ void Lucid::ReInitialDepthCamera()
 	std::cout << "Return nodes to their initial values" << std::endl;
 }
 
+/**
+ * @brief return nodes to their initial values of color camera
+ */
 void Lucid::ReInitialColorCamera()
 {
-	// return nodes to their initial values
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSource", colorInitialValue_.triggerSourceInitial);
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerMode", colorInitialValue_.triggerModeInitial);
 	Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "TriggerSelector", colorInitialValue_.triggerSelectorInitial);
@@ -1026,6 +1115,9 @@ void Lucid::ReInitialColorCamera()
 	std::cout << "Return nodes to their initial values" << std::endl;
 }
 
+/**
+ * @brief the camera needs to stop stream after it finish its job
+ */
 void Lucid::StopStream()
 {
 	// Stop the stream

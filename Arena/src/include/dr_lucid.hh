@@ -1,3 +1,4 @@
+// include Arena
 #include "GenTL.h"
 
 #include "ArenaApi.h"
@@ -12,14 +13,18 @@
 
 #include "ArenaApi.h"
 
+// include opencv
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
+// include pcl
 #include "pcl/io/pcd_io.h"
 #include "pcl/point_types.h"
 
-// store x, y, z data in mm and intensity for a given point
+/**
+ * @brief store x, y, z data in mm and intensity for a given point for point cloud
+ */
 struct PointData
 {
 	double x;
@@ -28,6 +33,9 @@ struct PointData
 	uint16_t intensity;
 };
 
+/**
+ * @brief store initial value of color camera
+ */
 struct ColorInitialValue
 {
   GenICam::gcstring triggerSourceInitial;
@@ -35,9 +43,12 @@ struct ColorInitialValue
   GenICam::gcstring triggerSelectorInitial;
   GenICam::gcstring pixelFormatInitial;
   GenICam::gcstring exposureAutoInitial;
-
 };
 
+
+/**
+ * @brief store initial value of depth camera
+ */
 struct DepthInitialValue
 {
   GenICam::gcstring triggerSourceInitial;
@@ -45,9 +56,11 @@ struct DepthInitialValue
   GenICam::gcstring triggerSelectorInitial;
   GenICam::gcstring pixelFormatInitial;
   GenICam::gcstring operatingModeInitial;
-
 };
 
+/**
+ * @brief store config for color camera
+ */
 struct ColorConfig
 {
   double fps;
@@ -66,6 +79,9 @@ struct ColorConfig
   bool reverse_y;
 };
 
+/**
+ * @brief store config for depth camera
+ */
 struct DepthConfig
 {
   double fps;
@@ -87,6 +103,9 @@ struct DepthConfig
   bool spatial_filter_enable;
 };
 
+/**
+ * @brief store the scale and offset of depth camera
+ */
 struct ScaleAndOffset
 {
   double scaleX;
@@ -97,6 +116,9 @@ struct ScaleAndOffset
   float offsetZ;
 };
 
+/**
+ * @brief lucid class
+ */
 class Lucid
 {
   public:
@@ -108,7 +130,7 @@ class Lucid
     ColorConfig colorConfig_;
     DepthConfig depthConfig_;
     int64_t fetch_frame_timeout_;
-    std::string save_path_ = "/home/bot/JHY/Captured_Images/";
+    std::string save_path_ = "/home/bot/JHY/Captured_Images/";  // manually set
 
     Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, ColorConfig colorConfig);
     Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, DepthConfig depthConfig);

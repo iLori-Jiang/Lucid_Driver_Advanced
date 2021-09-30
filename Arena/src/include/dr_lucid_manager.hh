@@ -3,6 +3,9 @@
 
 #include "dr_lucid.hh"
 
+/**
+ * @brief manager for lucid camera
+ */
 class LucidManager{
   public:
     LucidManager();
