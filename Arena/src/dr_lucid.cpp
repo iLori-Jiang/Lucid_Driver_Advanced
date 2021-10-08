@@ -844,12 +844,6 @@ cv::Mat Lucid::ImageToCVMat(Arena::IImage *pImage)
 		cv::Mat cv_image = cv::Mat((int)pImage->GetHeight(), (int)pImage->GetWidth(), CV_8UC1, (void*)pImage->GetData());
 		return cv_image;
 	}
-	else if (pixelFormat_ == DEPTH_PIXEL_FORMAT)
-	{
-		// Transformation to format CV_32FC3, 32 bit float, 3 channels
-		cv::Mat cv_image = cv::Mat((int)pImage->GetHeight(), (int)pImage->GetWidth(), CV_32FC3, (uint16_t*)pImage->GetData());
-		return cv_image;
-	}
 	else
 	{
 		// EXCEPTION
@@ -961,7 +955,7 @@ cv::Mat Lucid::DepthToIntensityImage(Arena::IImage *pImage)
 		for (int j=0; j<width; ++j)
 		{	
 			// assign intensity information
-			pointer[j] = data_points[counter].intensity;
+			pointer[j] = data_points[counter].intensity * 255 / 65535;
 			counter += 1;
 		}
 	}

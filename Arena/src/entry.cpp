@@ -32,7 +32,7 @@ int main()
 		macAddress: "1c:0f:af:00:46:6f",
 		resolution: 640,
 		exposure_time: 1000,
-		pixel_format: "gray",
+		pixel_format: "cloud",
 		detect_range: 3000,
 		detect_distance_min: 1000,
 		amplitude_gain: 30,
