@@ -11,10 +11,10 @@ class LucidManager{
     LucidManager();
     ~LucidManager();
 
-    Lucid *CreateDevice(ColorConfig colorConfig);
-    Lucid *CreateDevice(DepthConfig depthConfig);
-    Lucid *GetDevice(std::string macAddress);
-    bool DestoryDevice(std::string macAddress);
+    Lucid *CreateDevice(ColorConfig &colorConfig);
+    Lucid *CreateDevice(DepthConfig &depthConfig);
+    Lucid *GetDevice(std::string &macAddress);
+    bool DestoryDevice(std::string &macAddress);
     bool DestoryAllDevice();
 
   private:

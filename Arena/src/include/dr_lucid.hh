@@ -122,6 +122,7 @@ struct ScaleAndOffset
 class Lucid
 {
   public:
+    // camera properties and configuration
     std::string macAddress_;
     std::string deviceType_;
     std::string deviceFamily_;
@@ -132,41 +133,62 @@ class Lucid
     int64_t fetch_frame_timeout_;
     std::string save_path_ = "/home/bot/JHY/Captured_Images/";  // manually set
 
-    Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, ColorConfig colorConfig);
-    Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, DepthConfig depthConfig);
+    // output data
+    cv::Mat outputMat_;
+    pcl::PointCloud<pcl::PointXYZ> outputPtcloud_;
+
+    // constructor and deconstructor
+    Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, ColorConfig &colorConfig);
+    Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, DepthConfig &depthConfig);
     ~Lucid();
     Arena::IDevice *GetDevice();
 
+    // camera action
     void ConfigureCamera();
-    void GetAndSaveImage();
     void StartStream();
     void TriggerArming();
-    Arena::IImage *GetImage();
-    cv::Mat ImageToCVMat(Arena::IImage *pImage);
-    cv::Mat DepthToIntensityImage(Arena::IImage *pImage);
-    pcl::PointCloud<pcl::PointXYZ> DepthToPcd(Arena::IImage *pImage);
-    void SavePcd(pcl::PointCloud<pcl::PointXYZ> ptcloud, std::string filename);
-    void SaveCVMat(cv::Mat cv_image, std::string filename);
+    void GetImage();
+    void OutputImage();
+    void SaveImage();
+    void RequeueBuffer();
     void StopStream();
 
+    // image transformation
+    bool ImageToCVMat(Arena::IImage *pImage);
+    bool ProcessDepthImage(Arena::IImage *pImage);
+    bool DepthToIntensityImage(std::vector<PointData> &data_points, int height, int width);
+    bool DepthToPcd(std::vector<PointData> &data_points);
+
+    // image saveing
+    void SaveDepthImage(Arena::IImage *pImage, const char *filename);     // Lucid official
+    void SaveColorImage(Arena::IImage *pImage, const char *filename);     // Lucid official
+    void SaveIntensityImage(Arena::IImage *pImage, const char *filename); // Lucid official
+    void SavePcd(pcl::PointCloud<pcl::PointXYZ> &ptcloud, std::string &filename);
+    void SaveCVMat(cv::Mat &cv_image, std::string &filename);
+
   private:
+    // camera properties
     Arena::ISystem *pSystem_;
     Arena::IDevice *pDevice_;
-    Arena::IImage *pImage_;
-    int counter_;
     ColorInitialValue colorInitialValue_;
     DepthInitialValue depthInitialValue_;
     ScaleAndOffset scaleAndOffset_;
 
+    // images information
+    int counter_;
+    Arena::IImage *pImage_;
+    std::vector<PointData> data_points_;
+    cv::Mat color_;
+    cv::Mat gray_;
+    pcl::PointCloud<pcl::PointXYZ> ptcloud_;
+
+    // camera configuration
     void ConfigureHLTCamera();
     void ConfigurePHXCamera();
     void ConfigureTRICamera();
-    void SaveDepthImage(Arena::IImage *pImage, const char *filename);
-    void SaveColorImage(Arena::IImage *pImage, const char *filename);
-    void SaveIntensityImage(Arena::IImage *pImage, const char *filename);
-    void RequeueBuffer(Arena::IImage *pImage);
+
+    // camera initialization
     void ReInitialDepthCamera();
     void ReInitialColorCamera();
-    std::vector<PointData> ProcessDepthImage(Arena::IImage *pImage);
 };
 

@@ -1,4 +1,5 @@
 #include "include/dr_lucid_manager.hh"
+#include<pcl/visualization/cloud_viewer.h>
 
 int main()
 {
@@ -47,14 +48,11 @@ int main()
 
   try
   {
-		// set up lucid manager
     LucidManager *lucidManager = new LucidManager();
 
-		// set up lucid camera
-		Lucid *phoneix = lucidManager->CreateDevice(colorConfig);
 		Lucid *helios = lucidManager->CreateDevice(depthConfig);
+		Lucid *phoneix = lucidManager->CreateDevice(colorConfig);
 
-		// configure and start camera
     helios->ConfigureCamera();
     helios->StartStream();
 		phoneix->ConfigureCamera();
@@ -62,22 +60,41 @@ int main()
 		// triton->ConfigureCamera();
 		// triton->StartStream();
 
-		// take images
-
-		//while (true)
-		//{
+		while (true)
+		{
 			std::cout << "\nPress enter to get next image\n";
 			std::getchar();
 			helios->TriggerArming();
 			phoneix->TriggerArming();
 			// triton->TriggerArming();
 
-			helios->GetAndSaveImage();
-			phoneix->GetAndSaveImage();
-			// triton->GetAndSaveImage();
-		//}
+			helios->GetImage();
+			phoneix->GetImage();
 
-		// stop camera
+			// helios->SaveImage();
+			// phoneix->SaveImage();
+
+			helios->OutputImage();
+			phoneix->OutputImage();
+			cv::Mat outputMat_1 = helios->outputMat_;
+			pcl::PointCloud<pcl::PointXYZ>::Ptr outputPtcloud(new pcl::PointCloud<pcl::PointXYZ>);
+			outputPtcloud = helios->outputPtcloud_.makeShared();
+			cv::Mat outputMat_2 = phoneix->outputMat_;
+
+			cv::imshow("helios", outputMat_1);
+			cv::waitKey(-1);
+			cv::destroyAllWindows();
+			cv::imshow("phoneix", outputMat_2);
+			cv::waitKey(-1);
+			cv::destroyAllWindows();
+
+			pcl::io::savePCDFileASCII("/home/bot/JHY/Captured_Images/Depth_Images/test.pcd", helios->outputPtcloud_);
+
+			helios->RequeueBuffer();
+			phoneix->RequeueBuffer();
+			// triton->GetAndSaveImage();
+		}
+
     helios->StopStream();
 		phoneix->StopStream();
 		// triton->StopStream();

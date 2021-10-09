@@ -38,7 +38,7 @@ LucidManager::~LucidManager()
 /**
  * @brief set up certain color camera based on the config
  */
-Lucid *LucidManager::CreateDevice(ColorConfig colorConfig)
+Lucid *LucidManager::CreateDevice(ColorConfig &colorConfig)
 { 
   // use iterator to find the devie based on mac address
   std::map<std::string, Arena::DeviceInfo>::iterator it;
@@ -59,7 +59,7 @@ Lucid *LucidManager::CreateDevice(ColorConfig colorConfig)
 /**
  * @brief set up certain depth camera based on the config
  */
-Lucid *LucidManager::CreateDevice(DepthConfig depthConfig)
+Lucid *LucidManager::CreateDevice(DepthConfig &depthConfig)
 {
   // use iterator to find the devie based on mac address
   std::map<std::string, Arena::DeviceInfo>::iterator it;
@@ -80,7 +80,7 @@ Lucid *LucidManager::CreateDevice(DepthConfig depthConfig)
 /**
  * @brief get the certain device based on its mac address
  */
-Lucid *LucidManager::GetDevice(std::string macAddress)
+Lucid *LucidManager::GetDevice(std::string &macAddress)
 {
   for (uint8_t i=0; i<activeDeviceList_.size(); ++i)
   {
@@ -96,7 +96,7 @@ Lucid *LucidManager::GetDevice(std::string macAddress)
 /**
  * @brief destory the certain device based on its mac address
  */
-bool LucidManager::DestoryDevice(std::string macAddress)
+bool LucidManager::DestoryDevice(std::string &macAddress)
 {
   for (uint8_t i=0; i<activeDeviceList_.size(); ++i)
   {

@@ -17,7 +17,7 @@
 /**
  * @brief constructor for color camera
  */
-Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, ColorConfig colorConfig)
+Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, ColorConfig &colorConfig)
 {
 	colorConfig_ = colorConfig;
 	macAddress_ = colorConfig.macAddress;
@@ -62,7 +62,7 @@ Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, ColorConfig color
 /**
  * @brief constructor for depth camera
  */
-Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, DepthConfig depthConfig)
+Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, DepthConfig &depthConfig)
 {
 	depthConfig_ = depthConfig;
 	macAddress_ = depthConfig.macAddress;
@@ -117,6 +117,7 @@ Arena::IDevice *Lucid::GetDevice()
 
 /**
  * @brief save depth image, OFFICIAL FUNCTION
+ * @note basic function
  */
 void Lucid::SaveDepthImage(Arena::IImage *pImage, const char *filename)
 {
@@ -170,6 +171,7 @@ void Lucid::SaveDepthImage(Arena::IImage *pImage, const char *filename)
 
 /**
  * @brief save color image, OFFICIAL FUNCTION
+ * @note basic function
  */
 void Lucid::SaveColorImage(Arena::IImage *pImage, const char *filename)
 {
@@ -220,6 +222,7 @@ void Lucid::SaveColorImage(Arena::IImage *pImage, const char *filename)
 
 /**
  * @brief save intensity image, OFFICIAL FUNCTION
+ * @note basic function
  */
 void Lucid::SaveIntensityImage(Arena::IImage *pImage, const char *filename)
 {	
@@ -265,6 +268,7 @@ void Lucid::SaveIntensityImage(Arena::IImage *pImage, const char *filename)
 
 /**
  * @brief configure Helios2 camera
+ * @note basic function
  * @warning might occur error configuring other depth camera, with different config parameter
  */
 void Lucid::ConfigureHLTCamera()
@@ -459,6 +463,7 @@ void Lucid::ConfigureHLTCamera()
 
 /**
  * @brief configure Phoenix camera
+ * @note basic function
  */
 void Lucid::ConfigurePHXCamera()
 {
@@ -602,6 +607,7 @@ void Lucid::ConfigurePHXCamera()
 
 /**
  * @brief configure Triton camera
+ * @note basic function
  */
 void Lucid::ConfigureTRICamera()
 {
@@ -745,6 +751,7 @@ void Lucid::ConfigureTRICamera()
 
 /**
  * @brief automatically decide which camera to configure according to its family
+ * @note will call other basic functions
  * @warning currently only support Helios, Phoenix, and Triton
  */
 void Lucid::ConfigureCamera()
@@ -760,6 +767,7 @@ void Lucid::ConfigureCamera()
 
 /**
  * @brief camera should start stream first and then begin job on taking images
+ * @note basic function
  * @warning all the configuration should be done before this step
  */
 void Lucid::StartStream()
@@ -769,6 +777,7 @@ void Lucid::StartStream()
 
 /**
  * @brief before the camera take a image, it should arm its trigger and then shot the image
+ * @note basic function
  */
 void Lucid::TriggerArming()
 {
@@ -786,19 +795,21 @@ void Lucid::TriggerArming()
 
 /**
  * @brief after the camera take a image, it should requeue that image
+ * @note basic function
  */
-void Lucid::RequeueBuffer(Arena::IImage *pImage)
+void Lucid::RequeueBuffer()
 {
 	// requeue buffer
 	std::cout << TAB2 << "Requeue buffer\n";
 
-	pDevice_->RequeueBuffer(pImage);
+	pDevice_->RequeueBuffer(pImage_);
 }
 
 /**
- * @brief let the camera get the image, and return it
+ * @brief let the camera get the image
+ * @note basic function
  */
-Arena::IImage *Lucid::GetImage()
+void Lucid::GetImage()
 {
 	// Trigger an image
 	//    Trigger an image manually, since trigger mode is enabled. This triggers
@@ -816,18 +827,15 @@ Arena::IImage *Lucid::GetImage()
 			"TriggerSoftware");
 
 	std::cout << TAB2 << "Get image";
-	Arena::IImage *pImage = pDevice_->GetImage(fetch_frame_timeout_);
-	std::cout << " (" << pImage->GetWidth() << "x" << pImage->GetHeight() << ")\n";
-
-	RequeueBuffer(pImage);
-
-	return pImage;
+	pImage_ = pDevice_->GetImage(fetch_frame_timeout_);
+	std::cout << " (" << pImage_->GetWidth() << "x" << pImage_->GetHeight() << ")\n";
 }
 
 /**
  * @brief transform image to cv::Mat
+ * @note basic function
  */
-cv::Mat Lucid::ImageToCVMat(Arena::IImage *pImage)
+bool Lucid::ImageToCVMat(Arena::IImage *pImage)
 {
 	// Transform the image based on the pixel format
 	if (pixelFormat_ == COLOR_PIXEL_FORMAT)
@@ -835,39 +843,38 @@ cv::Mat Lucid::ImageToCVMat(Arena::IImage *pImage)
 		// Convert the image
 		auto pConverted = Arena::ImageFactory::Convert(pImage, BGR8);
 		// Transformation to format CV_8UC3, 8 bit unsigned int, 3 channels
-		cv::Mat cv_image = cv::Mat((int)pConverted->GetHeight(), (int)pConverted->GetWidth(), CV_8UC3, (void*)pConverted->GetData());
-		return cv_image;
+		color_ = cv::Mat((int)pConverted->GetHeight(), (int)pConverted->GetWidth(), CV_8UC3, (void*)pConverted->GetData());
+		return true;
 	}
 	else if (pixelFormat_ == INTENSITY_PIXEL_FORMAT)
 	{
 		// Transformation to format CV_8UC1, 8 bit unsigned int, 1 channels
-		cv::Mat cv_image = cv::Mat((int)pImage->GetHeight(), (int)pImage->GetWidth(), CV_8UC1, (void*)pImage->GetData());
-		return cv_image;
+		gray_ = cv::Mat((int)pImage->GetHeight(), (int)pImage->GetWidth(), CV_8UC1, (void*)pImage->GetData());
+		return true;
 	}
 	else
 	{
 		// EXCEPTION
-		cv::Mat excep(1, 1, CV_8UC1, cv::Scalar::all(0));
-		return excep;
+		return false;
 	}
 }
 
 /**
  * @brief traverse all the points in the depth image, and store them using PointData vector
+ * @note basic function
  */
-std::vector<PointData> Lucid::ProcessDepthImage(Arena::IImage *pImage)
+bool Lucid::ProcessDepthImage(Arena::IImage *pImage)
 {
 	std::cout << TAB4 << "Ready to process depth image..." << std::endl;
 
 	if (pixelFormat_ != DEPTH_PIXEL_FORMAT)
 	{
 		// EXCEPTION
-		std::vector<PointData> excep;
-		return excep;
+		return false;
 	}
 
 	// initial vector
-	std::vector<PointData> cloud_points;
+	std::vector<PointData> data_points;
 
 	// prepare info from input buffer
 	size_t width = pImage->GetWidth();
@@ -914,44 +921,40 @@ std::vector<PointData> Lucid::ProcessDepthImage(Arena::IImage *pImage)
 			intensity: intensity
 		};
 
-		cloud_points.push_back(point);
+		data_points.push_back(point);
 		//}
 
 		// loop increment
 		pIn += srcPixelSize;
 	}
 
+	data_points_ = data_points;
 	std::cout << TAB4 << "Process finished" << std::endl;
 
-	return cloud_points;
+	return true;
 }
 
 /**
  * @brief transform depth image to intensity image, using intensity information from Coord3D_ABCY16 format
+ * @note will call other basic functions
  */
-cv::Mat Lucid::DepthToIntensityImage(Arena::IImage *pImage)
+bool Lucid::DepthToIntensityImage(std::vector<PointData> &data_points, int height, int width)
 {	
 	if (pixelFormat_ != DEPTH_PIXEL_FORMAT)
 	{
 		// EXCEPTION
-		cv::Mat excep(1, 1, CV_8UC1, cv::Scalar::all(0));
-		return excep;
+		return false;
 	}
 
 	// initial cv::Mat
-	int height = (int)pImage->GetHeight();
-	int width = (int)pImage->GetWidth();
-	cv::Mat cv_image(height, width, CV_8UC1, cv::Scalar::all(0));
-
-	// get the PointData vector from the image
-	std::vector<PointData> data_points = ProcessDepthImage(pImage);
+	gray_ = cv::Mat(height, width, CV_8UC1, cv::Scalar::all(0));
 
 	// traverse
 	uchar *pointer;					// tool for cv::Mat traverse
 	uint64_t counter = 0;		// counter for points
 	for (int i=0; i<height; ++i)
 	{
-		pointer = cv_image.ptr(i);
+		pointer = gray_.ptr(i);
 		for (int j=0; j<width; ++j)
 		{	
 			// assign intensity information
@@ -959,23 +962,21 @@ cv::Mat Lucid::DepthToIntensityImage(Arena::IImage *pImage)
 			counter += 1;
 		}
 	}
-	return cv_image;
+	return true;
 }
 
 /**
  * @brief transform depth image to pcl pointcloud
+ * @note will call other basic functions
  */
-pcl::PointCloud<pcl::PointXYZ> Lucid::DepthToPcd(Arena::IImage *pImage)
+bool Lucid::DepthToPcd(std::vector<PointData> &data_points)
 {
 	if (pixelFormat_ != DEPTH_PIXEL_FORMAT)
 	{
 		// EXCEPTION
-		pcl::PointCloud<pcl::PointXYZ> excep;
-		return excep;
+		return false;
 	}
 
-	// get the PointData vector from the image
-	std::vector<PointData> data_points = ProcessDepthImage(pImage);
 	// initial pcl pointcloud
 	pcl::PointCloud<pcl::PointXYZ> ptcloud;
 
@@ -994,15 +995,18 @@ pcl::PointCloud<pcl::PointXYZ> Lucid::DepthToPcd(Arena::IImage *pImage)
 	ptcloud.height = 1;
 	ptcloud.width = data_points.size();
 
+	ptcloud_ = ptcloud;
+
 	std::cout << TAB4 << "PCL point cloud generated" << std::endl;
 
-	return ptcloud;
+	return true;
 };
 
 /**
  * @brief save pcl pointcloud to .pcd file
+ * @note basic function
  */
-void Lucid::SavePcd(pcl::PointCloud<pcl::PointXYZ> ptcloud, std::string filename)
+void Lucid::SavePcd(pcl::PointCloud<pcl::PointXYZ> &ptcloud, std::string &filename)
 {
 	std::cout << TAB3 << "Save pcd image to " << filename << std::endl;
 
@@ -1011,9 +1015,10 @@ void Lucid::SavePcd(pcl::PointCloud<pcl::PointXYZ> ptcloud, std::string filename
 
 /**
  * @brief save cv::Mat to .png file
- * @warning only save color or gray(intensity) image
+ * @note basic function
+ * @warning only save color and gray(intensity) image
  */
-void Lucid::SaveCVMat(cv::Mat cv_image, std::string filename)
+void Lucid::SaveCVMat(cv::Mat &cv_image, std::string &filename)
 {
 	std::cout << TAB3 << "Save cv matrix to " << filename << std::endl;
 
@@ -1030,23 +1035,11 @@ void Lucid::SaveCVMat(cv::Mat cv_image, std::string filename)
 }
 
 /**
- * @brief ask the camera to get and save image automatically
+ * @brief ask the camera to save image based on pixel format
+ * @note will call other basic functions
  */
-void Lucid::GetAndSaveImage()
+void Lucid::SaveImage()
 {	
-	// Get image
-	//    Once an image has been triggered, it can be retrieved. If no image has
-	//    been triggered, trying to retrieve an image will hang for the duration
-	//    of the timeout and then throw an exception.
-
-	Arena::ExecuteNode(
-			pDevice_->GetNodeMap(),
-			"TriggerSoftware");
-
-	std::cout << TAB2 << "Get image";
-	pImage_ = pDevice_->GetImage(fetch_frame_timeout_);
-	std::cout << " (" << pImage_->GetWidth() << "x" << pImage_->GetHeight() << ")\n";
-	
 	// Prepare the filename
 	std::string timestamp = std::to_string(pImage_->GetTimestampNs());
 	std::string filename = deviceFamily_ + "_" + timestamp + "_" + std::to_string(counter_++);
@@ -1055,34 +1048,69 @@ void Lucid::GetAndSaveImage()
 	if (pixelFormat_ == COLOR_PIXEL_FORMAT)
 	{
 		filename = save_path_ + "Color_Images/" + filename + ".png";
-		SaveCVMat(ImageToCVMat(pImage_), filename);
+		if(!ImageToCVMat(pImage_)){return;}
+		SaveCVMat(color_, filename);
 		// SaveColorImage(pImage_, filename.c_str());
 		// std::cout << TAB2 << "save " << filename << "\n";
 	}
 	else if (pixelFormat_ == DEPTH_PIXEL_FORMAT)
 	{
+		if(!ProcessDepthImage(pImage_)){return;}
+
 		filename = save_path_ + "Depth_Images/" + filename;
 		std::string pcd_filename = filename + ".pcd";
 		std::string intensity_filename = filename + ".png";
-		SavePcd(DepthToPcd(pImage_), pcd_filename);
-		SaveCVMat(DepthToIntensityImage(pImage_), intensity_filename);
+
+		if(!DepthToPcd(data_points_)){return;}
+		SavePcd(ptcloud_, pcd_filename);
+
+		if(!DepthToIntensityImage(data_points_, (int)pImage_->GetHeight(), (int)pImage_->GetWidth())){return;}
+		SaveCVMat(gray_, intensity_filename);
 		// SaveDepthImage(pImage_, filename.c_str());
 		// std::cout << TAB2 << "save " << filename << "\n";
 	}
 	else if (pixelFormat_ == INTENSITY_PIXEL_FORMAT)
 	{
 		filename = save_path_ + "Intensity_Images/" + filename + ".png";
-		SaveCVMat(ImageToCVMat(pImage_), filename);
+		if(!ImageToCVMat(pImage_)){return;}
+		SaveCVMat(gray_, filename);
 		// SaveIntensityImage(pImage_, filename.c_str());
 		// std::cout << TAB2 << "save " << filename << "\n";
 	}
+	else{return;}
+}
 
-	// requeue image buffer
-	RequeueBuffer(pImage_);
+/**
+ * @brief transform captured image and output it to cv::Mat or pcl::PointCloud
+ * @note will call other basic functions
+ */
+void Lucid::OutputImage()
+{
+	if (pixelFormat_ == COLOR_PIXEL_FORMAT)
+	{
+		if(!ImageToCVMat(pImage_)){return;}
+		outputMat_ = color_;
+	}
+	else if (pixelFormat_ == DEPTH_PIXEL_FORMAT)
+	{
+		if(!ProcessDepthImage(pImage_)){return;}
+
+		if(!DepthToPcd(data_points_)){return;}
+		outputPtcloud_ = ptcloud_;
+
+		if(!DepthToIntensityImage(data_points_, (int)pImage_->GetHeight(), (int)pImage_->GetWidth())){return;}
+		outputMat_ = gray_;
+	}
+	else if (pixelFormat_ == INTENSITY_PIXEL_FORMAT)
+	{
+		if(!ImageToCVMat(pImage_)){return;}
+		outputMat_ = gray_;
+	}
 }
 
 /**
  * @brief return nodes to their initial values of depth camera
+ * @note basic function
  */
 void Lucid::ReInitialDepthCamera()
 {
@@ -1097,6 +1125,7 @@ void Lucid::ReInitialDepthCamera()
 
 /**
  * @brief return nodes to their initial values of color camera
+ * @note basic function
  */
 void Lucid::ReInitialColorCamera()
 {
@@ -1111,15 +1140,18 @@ void Lucid::ReInitialColorCamera()
 
 /**
  * @brief the camera needs to stop stream after it finish its job
+ * @note will call other basic functions
  */
 void Lucid::StopStream()
 {
 	// Stop the stream
-	std::cout << TAB1 << "Stop stream\n";
+	std::cout << "Stop stream\n";
 
 	pDevice_->StopStream();
 
 	// Return camera to its initial state
 	if (deviceType_ == "depth"){ReInitialDepthCamera();}
 	else if (deviceType_ == "color"){ReInitialColorCamera();}
+
+	std::cout << std::endl;
 }
