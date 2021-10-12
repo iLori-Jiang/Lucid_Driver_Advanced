@@ -8,7 +8,7 @@ int main()
 	// load config
 
 	// color config
-	ColorConfig colorConfig={
+	dr::Lucid::ColorConfig colorConfig={
 		fps: 5,
 		trigger_mode: true,
 		fetch_frame_timeout: 2000,
@@ -26,7 +26,7 @@ int main()
 	};
 
 	// depth config
-	DepthConfig depthConfig={
+	dr::Lucid::DepthConfig depthConfig={
 		fps: 5,
 		trigger_mode: true,
 		fetch_frame_timeout: 2000,
@@ -48,56 +48,47 @@ int main()
 
   try
   {
-    LucidManager *lucidManager = new LucidManager();
-
-		Lucid *helios = lucidManager->CreateDevice(depthConfig);
-		Lucid *phoneix = lucidManager->CreateDevice(colorConfig);
-
-    helios->ConfigureCamera();
-    helios->StartStream();
-		phoneix->ConfigureCamera();
-		phoneix->StartStream();
-		// triton->ConfigureCamera();
-		// triton->StartStream();
+    dr::LucidManager *lucidManager = new dr::LucidManager();
+		std::string config_file_path = "/config/lucid.json";
+		std::vector<dr::Lucid *> dr_lucid_list = lucidManager->Init(config_file_path);
+		on_start(dr_lucid_list);
 
 		while (true)
 		{
 			std::cout << "\nPress enter to get next image\n";
 			std::getchar();
-			helios->TriggerArming();
-			phoneix->TriggerArming();
-			// triton->TriggerArming();
 
-			helios->GetImage();
-			phoneix->GetImage();
+			cv::Mat color_image;
+			cv::Mat ir_image;
+			cv::Mat depth_image;
+			std::vector<cv::Point3f> points;
+			bool get_data_success = true;
+			for (auto lucid : dr_lucid_list)
+			{
+				if(!lucid->TriggerArming()){get_data_success = false; break;}
+				if(!lucid->GetImage()){get_data_success = false; break;}
+				if(!lucid->OutputImage()){get_data_success = false; break;}
 
-			// helios->SaveImage();
-			// phoneix->SaveImage();
+				if (lucid.pixelFormat_ == COLOR_PIXEL_FORMAT) {color_image = lucid.color_;}
+				else if (lucid.pixelFormat_ == INTENSITY_PIXEL_FORMAT) {ir_image = lucid.gray_;}
+				else if (lucid.pixelFormat_ == DEPTH_PIXEL_FORMAT) {ir_image = lucid.gray_; points = lucid.cvpoints_; depth_image = lucid.depth_;}
+				else {get_data_success = false; break;}
 
-			helios->OutputImage();
-			phoneix->OutputImage();
-			cv::Mat outputMat_1 = helios->outputMat_;
-			pcl::PointCloud<pcl::PointXYZ>::Ptr outputPtcloud(new pcl::PointCloud<pcl::PointXYZ>);
-			outputPtcloud = helios->outputPtcloud_.makeShared();
-			cv::Mat outputMat_2 = phoneix->outputMat_;
+				if(!lucid->RequeueBuffer()){get_data_success = false; break;}
+			}
 
-			cv::imshow("helios", outputMat_1);
+			cv::imshow("color", color_image);
 			cv::waitKey(-1);
 			cv::destroyAllWindows();
-			cv::imshow("phoneix", outputMat_2);
+			cv::imshow("gray", ir_image);
 			cv::waitKey(-1);
 			cv::destroyAllWindows();
-
-			pcl::io::savePCDFileASCII("/home/bot/JHY/Captured_Images/Depth_Images/test.pcd", helios->outputPtcloud_);
-
-			helios->RequeueBuffer();
-			phoneix->RequeueBuffer();
-			// triton->GetAndSaveImage();
+			cv::imshow("depth", depth_image);
+			cv::waitKey(-1);
+			cv::destroyAllWindows();
 		}
 
-    helios->StopStream();
-		phoneix->StopStream();
-		// triton->StopStream();
+    on_stop(dr_lucid_list);
   }
   catch (GenICam::GenericException &ge)
 	{
@@ -123,4 +114,32 @@ int main()
 	else
 		return 0;
   
+}
+
+bool on_start(std::vector<dr::Lucid *> dr_lucid_list) 
+{
+	for (auto lucid : dr_lucid_list)
+	{
+		if(!lucid->ConfigureCamera()) {return false;}
+		if(!lucid->StartStream()) {return false;}
+	}
+	return true;
+}
+
+bool on_stop(std::vector<dr::Lucid *> dr_lucid_lis) 
+{
+	for (auto lucid : dr_lucid_list) 
+	{
+		if(!lucid->StopStream()) {return false;}
+	}
+	return true;
+}
+
+bool on_reset(std::vector<dr::Lucid *> dr_lucid_list) 
+{ 
+	for (auto lucid : dr_lucid_list)
+	{
+		if(!lucid->ResetCamera()) {return false;}
+	}
+	return true;
 }
