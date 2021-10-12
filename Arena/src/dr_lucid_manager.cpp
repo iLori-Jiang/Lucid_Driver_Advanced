@@ -1,6 +1,6 @@
 #include <fstream>
-#include <nlohmann/json.hpp>
 
+# include "include/json.hpp"
 # include "include/dr_lucid_manager.hh"
 
 namespace dr
@@ -59,7 +59,7 @@ dr::Lucid *LucidManager::CreateDevice(dr::Lucid::ColorConfig &colorConfig)
   }else{
     // EXCEPTION
     //DRL_ERROR_STREAM("No Lucid camera found on the mac address!!!!");
-    return;
+    return NULL;
   }
 }
 
@@ -81,16 +81,16 @@ dr::Lucid *LucidManager::CreateDevice(dr::Lucid::DepthConfig &depthConfig)
   }else{
     // EXCEPTION
     //DRL_ERROR_STREAM("No Lucid camera found on the mac address!!!!");
-    return;
+    return NULL;
   }
 }
 
 /**
  * @warning
  */
-std::vector<dr::Lucid> *LucidManager::Init(const std::string &config_file_path)
+std::vector<dr::Lucid *> LucidManager::Init(const std::string &config_file_path)
 {
-  std::vector<dr::Lucid> *lucidList;
+  std::vector<dr::Lucid *> lucidList;
 
   try
   {
@@ -120,7 +120,7 @@ std::vector<dr::Lucid> *LucidManager::Init(const std::string &config_file_path)
         colorConfig.reverse_y = camera.at("reverse_y");
 
         dr::Lucid *color = CreateDevice(colorConfig);
-        lucidList->push_back(color);
+        lucidList.push_back(color);
       }
       else if (camera.at("type") == "depth")
       {
@@ -145,11 +145,12 @@ std::vector<dr::Lucid> *LucidManager::Init(const std::string &config_file_path)
         depthConfig.spatial_filter_enable = camera.at("spatial_filter_enable");
 
         dr::Lucid *depth = CreateDevice(depthConfig);
-        lucidList->push_back(depth);
+        lucidList.push_back(depth);
       }else
       {
         //DRL_ERROR_STREAM("Invalid configuration for Lucid!!!! Please check sample config file.");
-        return;
+        std::vector<Lucid *> empty;
+        return empty;
       }
     }
   }
@@ -175,7 +176,7 @@ dr::Lucid *LucidManager::GetDevice(std::string &macAddress)
   }
   // EXCEPTION
   //DRL_ERROR_STREAM("No Lucid camera found on the mac address!!!!");
-  return;
+  return NULL;
 }
 
 /**

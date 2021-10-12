@@ -13,7 +13,7 @@ class LucidManager{
     LucidManager();
     ~LucidManager();
 
-    std::vector<dr::Lucid> *Init(const std::string &conf_file_path);
+    std::vector<dr::Lucid *> Init(const std::string &conf_file_path);
     dr::Lucid *CreateDevice(dr::Lucid::ColorConfig &colorConfig);
     dr::Lucid *CreateDevice(dr::Lucid::DepthConfig &depthConfig);
     dr::Lucid *GetDevice(std::string &macAddress);
