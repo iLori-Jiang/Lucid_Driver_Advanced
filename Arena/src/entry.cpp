@@ -25,7 +25,7 @@ bool on_get_image(std::vector<dr::Lucid *> &dr_lucid_list)
 	{
 		if(!lucid->TriggerArming()){get_data_success = false; break;}
 		if(!lucid->GetImage()){get_data_success = false; break;}
-		if(!lucid->OutputImage()){get_data_success = false; break;}
+		if(!lucid->ProcessImage()){get_data_success = false; break;}
 
 		if (lucid->pixelFormat_ == COLOR_PIXEL_FORMAT) {color_image = lucid->color_;}
 		else if (lucid->pixelFormat_ == INTENSITY_PIXEL_FORMAT) {ir_image = lucid->gray_;}
@@ -46,6 +46,11 @@ bool on_get_image(std::vector<dr::Lucid *> &dr_lucid_list)
 		cv::imshow("depth", depth_image);
 		cv::waitKey(-1);
 		cv::destroyAllWindows();
+		return true;
+	}
+	else
+	{
+		return false;
 	}
 }
 
@@ -75,9 +80,8 @@ int main()
   {
     dr::LucidManager *lucidManager = new dr::LucidManager();
 		std::string config_file_path = "/home/bot/JHY/lucid_test_WS/ArenaSDK_v0.1.54_Linux_x64/ArenaSDK_TEST/Examples/Arena/src/config/lucid.json";
-		std::vector<dr::Lucid *> dr_lucid_list = lucidManager->Init(config_file_path);
+		// std::vector<dr::Lucid *> dr_lucid_list = lucidManager->Init(config_file_path);
 
-		/**
 		std::vector<dr::Lucid *> dr_lucid_list;
 		dr::Lucid::ColorConfig colorConfig;
 		colorConfig.macAddress = "1c:0f:af:0c:85:61";
@@ -87,8 +91,7 @@ int main()
 		depthConfig.save_path = "/home/bot/JHY/Captured_Images/";
 
 		dr_lucid_list.push_back(lucidManager->CreateDevice(colorConfig));
-		dr_lucid_list.push_back(lucidManager->CreateDevice(depthConfig));
-		**/
+		// dr_lucid_list.push_back(lucidManager->CreateDevice(depthConfig));
 
 		on_start(dr_lucid_list);
 

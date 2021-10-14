@@ -41,6 +41,10 @@ Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, ColorConfig &colo
 		return;
 	}
 
+	// if user want to save images
+	if ((colorConfig.save_path == "") || (colorConfig.save_path == " ") || (colorConfig.save_path == "  ")) {save_flag_ = false;}
+	else {save_flag_ = true;}
+
 	// assign camera type and family
 	GenICam::gcstring deviceModelName = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "DeviceModelName");
 	deviceModelName_ = deviceModelName.c_str();
@@ -89,6 +93,10 @@ Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, DepthConfig &dept
 		//DRL_ERROR_STREAM("Invalid pixel format config!!!!");
 		return;
 	}
+
+	// if user want to save images
+	if ((depthConfig.save_path == "") || (depthConfig.save_path == " ") || (depthConfig.save_path == "  ")) {save_flag_ = false;}
+	else {save_flag_ = true;}
 
 	// assign camera type and family
 	GenICam::gcstring deviceModelName = Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "DeviceModelName");
@@ -1059,10 +1067,10 @@ void Lucid::SaveCVMat(cv::Mat &cv_image, std::string &filename)
 }
 
 /**
- * @brief ask the camera to save image based on pixel format
+ * @brief ask the camera to transform and save image based on pixel format
  * @note will call other basic functions
  */
-bool Lucid::SaveImage()
+bool Lucid::ProcessImage()
 {	
 	// Prepare the filename
 	std::string timestamp = std::to_string(pImage_->GetTimestampNs());
@@ -1073,7 +1081,7 @@ bool Lucid::SaveImage()
 	{
 		filename = save_path_ + "Color_Images/" + filename + ".png";
 		if(!ImageToCVMat(pImage_)){return false;}
-		SaveCVMat(color_, filename);
+		if(save_flag_){SaveCVMat(color_, filename);}
 		// SaveColorImage(pImage_, filename.c_str());
 		// std::cout << TAB2 << "save " << filename << "\n";
 	}
@@ -1086,10 +1094,9 @@ bool Lucid::SaveImage()
 		std::string intensity_filename = filename + ".png";
 
 		if(!DepthToPcd(data_points_)){return false;}
-		SavePcd(ptcloud_, pcd_filename);
-
 		if(!DepthToCVMat(data_points_, (int)pImage_->GetHeight(), (int)pImage_->GetWidth())){return false;}
-		SaveCVMat(gray_, intensity_filename);
+		
+		if(save_flag_){SavePcd(ptcloud_, pcd_filename); SaveCVMat(gray_, intensity_filename);}
 		// SaveDepthImage(pImage_, filename.c_str());
 		// std::cout << TAB2 << "save " << filename << "\n";
 	}
@@ -1097,38 +1104,11 @@ bool Lucid::SaveImage()
 	{
 		filename = save_path_ + "Intensity_Images/" + filename + ".png";
 		if(!ImageToCVMat(pImage_)){return false;}
-		SaveCVMat(gray_, filename);
+		if(save_flag_){SaveCVMat(gray_, filename);}
 		// SaveIntensityImage(pImage_, filename.c_str());
 		// std::cout << TAB2 << "save " << filename << "\n";
 	}
 	else{return false;}
-
-	return true;
-}
-
-/**
- * @brief transform captured image and output it to cv::Mat or pcl::PointCloud
- * @note will call other basic functions
- */
-bool Lucid::OutputImage()
-{
-	if (pixelFormat_ == COLOR_PIXEL_FORMAT)
-	{
-		if(!ImageToCVMat(pImage_)){return false;}
-	}
-	else if (pixelFormat_ == DEPTH_PIXEL_FORMAT)
-	{
-		if(!ProcessDepthImage(pImage_)){return false;}
-
-		if(!DepthToPcd(data_points_)){return false;}
-
-		if(!DepthToCVMat(data_points_, (int)pImage_->GetHeight(), (int)pImage_->GetWidth())){return false;}
-	}
-	else if (pixelFormat_ == INTENSITY_PIXEL_FORMAT)
-	{
-		if(!ImageToCVMat(pImage_)){return false;}
-	}
-	else {return false;}
 
 	return true;
 }

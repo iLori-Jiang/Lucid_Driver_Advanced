@@ -194,8 +194,7 @@ class Lucid
     // get image
     bool TriggerArming();
     bool GetImage();
-    bool OutputImage();
-    bool SaveImage();
+    bool ProcessImage();
     bool RequeueBuffer();
     // stop
     bool StopStream();
@@ -214,6 +213,7 @@ class Lucid
     DepthInitialValue depthInitialValue_;
     ScaleAndOffset scaleAndOffset_;
     bool is_reset_;
+    bool save_flag_;
 
     // images information
     int counter_;
