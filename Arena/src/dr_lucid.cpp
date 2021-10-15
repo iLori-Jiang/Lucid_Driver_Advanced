@@ -901,6 +901,7 @@ bool Lucid::ProcessDepthImage(Arena::IImage *pImage)
 	// initial vector
 	std::vector<PointData> data_points;
 	std::vector<cv::Point3f> cv_points;
+	std::vector<uint16_t> z_list;
 
 	// prepare info from input buffer
 	size_t width = pImage->GetWidth();
@@ -925,11 +926,6 @@ bool Lucid::ProcessDepthImage(Arena::IImage *pImage)
 		uint16_t z = *reinterpret_cast<const uint16_t*>((pIn + 4));
 		uint16_t intensity = *reinterpret_cast<const uint16_t*>((pIn + 6));
 
-		// if z is less than max value, as invalid values get filtered to
-		// 65535
-		//if (z < 65535)
-		//{
-
 		// Convert x, y and z to millimeters
 		//    Using each coordinates' appropriate scales, convert x, y
 		//    and z values to mm. For the x and y coordinates in an
@@ -949,12 +945,13 @@ bool Lucid::ProcessDepthImage(Arena::IImage *pImage)
 
 		data_points.push_back(point);
 		cv_points.push_back(cv::Point3f(xSigned, ySigned, zSigned));
-		//}
+		z_list.push_back(z);
 
 		// loop increment
 		pIn += srcPixelSize;
 	}
 
+	z_list_ = z_list;
 	data_points_ = data_points;
 	cvpoints_ = cv_points;
 	std::cout << TAB4 << "Process finished" << std::endl;
@@ -976,7 +973,7 @@ bool Lucid::DepthToCVMat(std::vector<PointData> &data_points, int height, int wi
 
 	// initial cv::Mat
 	gray_ = cv::Mat(height, width, CV_8UC1, cv::Scalar::all(0));
-	depth_ = cv::Mat(height, width, CV_16UC1, cv::Scalar::all(0));
+	depth_ = cv::Mat(height, width, CV_8UC1, cv::Scalar::all(0));
 
 	// traverse
 	uchar *pointer_gray;					// tool for cv::Mat traverse
@@ -990,10 +987,13 @@ bool Lucid::DepthToCVMat(std::vector<PointData> &data_points, int height, int wi
 		{	
 			// assign intensity information
 			pointer_gray[j] = data_points[counter].intensity * 255 / 65535;
+			// pointer_depth[j] = z_list_[counter];
 			pointer_depth[j] = data_points[counter].z;
 			counter += 1;
 		}
 	}
+	depth_.convertTo(depth_, CV_16UC1, 255);
+	std::cout << TAB4 << "Process depth image done" << std::endl;
 	return true;
 }
 
@@ -1053,17 +1053,7 @@ void Lucid::SavePcd(pcl::PointCloud<pcl::PointXYZ> &ptcloud, std::string &filena
 void Lucid::SaveCVMat(cv::Mat &cv_image, std::string &filename)
 {
 	std::cout << TAB3 << "Save cv matrix to " << filename << std::endl;
-
-	// if the image is 8U3C(color) or 8U1C(intensity)
-	if ((cv_image.type() == 0) || (cv_image.type() == 16))
-	{
-		cv::imwrite(filename, cv_image);
-	}else if (cv_image.type() == 21)
-	{
-		// DEPTH cannot save
-		std::cout << "If you want to save depth image, please use DepthToPcd() and SavePcd()" << std::endl;
-		return;
-	}
+	cv::imwrite(filename, cv_image);
 }
 
 /**
@@ -1091,12 +1081,13 @@ bool Lucid::ProcessImage()
 
 		filename = save_path_ + "Depth_Images/" + filename;
 		std::string pcd_filename = filename + ".pcd";
-		std::string intensity_filename = filename + ".png";
+		std::string intensity_filename = filename + "_gray.png";
+		std::string depth_filename = filename + "_depth.png";
 
 		if(!DepthToPcd(data_points_)){return false;}
 		if(!DepthToCVMat(data_points_, (int)pImage_->GetHeight(), (int)pImage_->GetWidth())){return false;}
 		
-		if(save_flag_){SavePcd(ptcloud_, pcd_filename); SaveCVMat(gray_, intensity_filename);}
+		if(save_flag_){SavePcd(ptcloud_, pcd_filename); SaveCVMat(gray_, intensity_filename); SaveCVMat(depth_, depth_filename);}
 		// SaveDepthImage(pImage_, filename.c_str());
 		// std::cout << TAB2 << "save " << filename << "\n";
 	}

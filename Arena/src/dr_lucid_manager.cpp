@@ -5,6 +5,10 @@
 
 namespace dr
 {
+#define COLOR_PIXEL_FORMAT "BGR8"
+#define DEPTH_PIXEL_FORMAT "Coord3D_ABCY16"
+#define INTENSITY_PIXEL_FORMAT "Mono8"
+
 /**
  * @brief constructor for lucid manager
  */
@@ -31,6 +35,10 @@ LucidManager::LucidManager()
 		//DRL_ERROR_STREAM("No Lucid camera connected!!!!");
     return;
 	}
+
+  color_enable_ = false;
+  depth_enable_ = false;
+  gray_enable_ = false;
 }
 
 /**
@@ -88,9 +96,9 @@ dr::Lucid *LucidManager::CreateDevice(dr::Lucid::DepthConfig &depthConfig)
 /**
  * @warning
  */
-std::vector<dr::Lucid *> LucidManager::Init(const std::string &config_file_path)
+bool LucidManager::init(const std::string &config_file_path)
 {
-  std::vector<dr::Lucid *> lucidList;
+  std::vector<dr::Lucid *> activeDeviceList_;
 
   try
   {
@@ -119,8 +127,11 @@ std::vector<dr::Lucid *> LucidManager::Init(const std::string &config_file_path)
         colorConfig.reverse_x = camera.at("reverse_x");
         colorConfig.reverse_y = camera.at("reverse_y");
 
+        if (camera.at("pixel_format") == "rgb") {color_enable_ = true;}
+        else if (camera.at("pixel_format") == "gray") {gray_enable_ = true;}
+
         dr::Lucid *color = CreateDevice(colorConfig);
-        lucidList.push_back(color);
+        activeDeviceList_.push_back(color);
       }
       else if (camera.at("type") == "depth")
       {
@@ -144,13 +155,15 @@ std::vector<dr::Lucid *> LucidManager::Init(const std::string &config_file_path)
         depthConfig.flying_pixels_distance_min = camera.at("flying_pixels_distance_min");
         depthConfig.spatial_filter_enable = camera.at("spatial_filter_enable");
 
+        if (camera.at("pixel_format") == "cloud") {depth_enable_ = true; gray_enable_ = true;}
+        else if (camera.at("pixel_format") == "gray") {gray_enable_ = true;}
+
         dr::Lucid *depth = CreateDevice(depthConfig);
-        lucidList.push_back(depth);
+        activeDeviceList_.push_back(depth);
       }else
       {
         //DRL_ERROR_STREAM("Invalid configuration for Lucid!!!! Please check sample config file.");
-        std::vector<Lucid *> empty;
-        return empty;
+        return false;
       }
     }
   }
@@ -159,8 +172,61 @@ std::vector<dr::Lucid *> LucidManager::Init(const std::string &config_file_path)
     //DRL_ERROR_STREAM("Invalid configuration for Lucid!!!! Please check sample config file.");
     throw;
   }
-  return lucidList;
+  return true;
 };
+
+bool LucidManager::start()
+{
+  for (auto lucid : activeDeviceList_)
+	{
+		if(!lucid->ConfigureCamera()) {return false;}
+		if(!lucid->StartStream()) {return false;}
+
+    for (int i=0; i<5; ++i)
+    {
+      if(!lucid->TriggerArming()){return false;}
+		  if(!lucid->GetImage()){return false;}
+      if(!lucid->RequeueBuffer()){return false;}
+    }
+	}
+	return true;
+}
+
+bool LucidManager::acquire_data(cv::Mat &color_image, cv::Mat &ir_image, cv::Mat &depth_image, std::vector<cv::Point3f> &points)
+{
+  for (auto lucid : activeDeviceList_)
+	{
+		if(!lucid->TriggerArming()){return false;}
+		if(!lucid->GetImage()){return false;}
+		if(!lucid->ProcessImage()){return false;}
+
+		if (lucid->pixelFormat_ == COLOR_PIXEL_FORMAT) {color_image = lucid->color_;}
+		else if (lucid->pixelFormat_ == INTENSITY_PIXEL_FORMAT) {ir_image = lucid->gray_;}
+		else if (lucid->pixelFormat_ == DEPTH_PIXEL_FORMAT) {ir_image = lucid->gray_; points = lucid->cvpoints_; depth_image = lucid->depth_;}
+		else {return false;}
+
+		if(!lucid->RequeueBuffer()){return false;}
+	}
+  return true;
+}
+
+bool LucidManager::stop()
+{
+  for (auto lucid : activeDeviceList_) 
+	{
+		if(!lucid->StopStream()) {return false;}
+	}
+	return true;
+}
+
+bool LucidManager::reset()
+{
+  for (auto lucid : activeDeviceList_)
+	{
+		if(!lucid->ResetCamera()) {return false;}
+	}
+	return true;
+}
 
 /**
  * @brief get the certain device based on its mac address

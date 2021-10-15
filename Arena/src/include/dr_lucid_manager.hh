@@ -10,10 +10,20 @@ namespace dr
  */
 class LucidManager{
   public:
+    bool color_enable_;
+    bool depth_enable_;
+    bool gray_enable_;
+    
     LucidManager();
     ~LucidManager();
 
-    std::vector<dr::Lucid *> Init(const std::string &conf_file_path);
+    // ROS intefaces
+    bool init(const std::string &conf_file_path);
+    bool start();
+    bool acquire_data(cv::Mat &color_image, cv::Mat &ir_image, cv::Mat &depth_image, std::vector<cv::Point3f> &points);
+    bool stop();
+    bool reset();
+
     dr::Lucid *CreateDevice(dr::Lucid::ColorConfig &colorConfig);
     dr::Lucid *CreateDevice(dr::Lucid::DepthConfig &depthConfig);
     dr::Lucid *GetDevice(std::string &macAddress);

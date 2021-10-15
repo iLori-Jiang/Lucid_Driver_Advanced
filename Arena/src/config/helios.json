@@ -1,0 +1,27 @@
+{
+  "common": {
+    "fps": 5,
+    "trigger_mode": true,
+    "fetch_frame_timeout": 2000,
+    "save_path": "/home/bot/JHY/Captured_Images/"
+  },
+  "cameras": {
+    "camera_2": {
+      "type": "depth",
+      "mac": "1c:0f:af:00:46:6f",
+      "resolution": 640,
+      "pixel_format": "cloud",
+      "exposure_time": 1000,
+      "detect_range": 3000,
+      "detect_distance_min": 1000,
+      "amplitude_gain": 20,
+      "confidence_threshold_enable": true,
+      "confidence_threshold_min": 500,
+      "image_accumulation": 4,
+      "conversion_gain": "low",
+      "flying_pixels_removal_enable": false,
+      "flying_pixels_distance_min": 300,
+      "spatial_filter_enable": true
+    }
+  }
+}

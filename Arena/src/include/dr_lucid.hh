@@ -219,6 +219,7 @@ class Lucid
     int counter_;
     Arena::IImage *pImage_;
     std::vector<PointData> data_points_;
+    std::vector<uint16_t> z_list_;
 
     // camera configuration
     void ConfigureHLTCamera();
