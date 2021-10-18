@@ -228,7 +228,7 @@ bool LucidManager::reset()
   auto iter = activeDeviceList_.begin();
   while (iter != activeDeviceList_.end())
   {
-    if(!iter->ResetCamera()) {return false;}
+    if(!(*iter)->ResetCamera()) {return false;}
     iter = activeDeviceList_.erase(iter);
   }
 
@@ -236,8 +236,6 @@ bool LucidManager::reset()
 }
 
 /**
- * 
- */
 bool LucidManager::get_rgb_camera_info(dr::CameraInfo& camera_info)
 {
   camera_info.frame_id = "lucid_color_optical_frame";
@@ -247,12 +245,10 @@ bool LucidManager::get_rgb_camera_info(dr::CameraInfo& camera_info)
 
   camera_info.distortion_model = dr::distortion_models::RATIONAL_POLYNOMIAL;
 
-  /**
   for (auto& x : rgb_coffe_.data)
   {
     camera_info.distortion_coefficients.push_back(x);
   }
-  **/
 
   camera_info.intrinsic_matrix = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
   camera_info.projection_matrix = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
@@ -270,12 +266,10 @@ bool LucidManager::get_depth_camera_info(dr::CameraInfo& camera_info)
 
   camera_info.distortion_model = dr::distortion_models::RATIONAL_POLYNOMIAL;
   
-  /**
   for (auto& x : dp_coffe_.data)
   {
     camera_info.distortion_coefficients.push_back(x);
   }
-  **/
 
   camera_info.intrinsic_matrix = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
   camera_info.projection_matrix = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
@@ -283,13 +277,14 @@ bool LucidManager::get_depth_camera_info(dr::CameraInfo& camera_info)
 
   return true;
 }
+**/
 
 /**
  * @brief get the certain device based on its mac address
  */
 dr::Lucid *LucidManager::GetDevice(std::string &macAddress)
 {
-  for (int i=0; i<activeDeviceList_.size(); ++i)
+  for (uint8_t i=0; i<activeDeviceList_.size(); ++i)
   {
     if (activeDeviceList_[i]->macAddress_ == macAddress)
     {
@@ -306,7 +301,7 @@ dr::Lucid *LucidManager::GetDevice(std::string &macAddress)
  */
 bool LucidManager::DestoryDevice(std::string &macAddress)
 {
-  for (int i=0; i<activeDeviceList_.size(); ++i)
+  for (uint8_t i=0; i<activeDeviceList_.size(); ++i)
   {
     if (activeDeviceList_[i]->macAddress_ == macAddress)
     {
@@ -328,7 +323,7 @@ void LucidManager::DestoryAllDevice()
   auto iter = activeDeviceList_.begin();
   while (iter != activeDeviceList_.end())
   {
-    pSystem_->DestroyDevice(iter->GetDevice());
+    pSystem_->DestroyDevice((*iter)->GetDevice());
     iter = activeDeviceList_.erase(iter);
   }
 }
