@@ -23,12 +23,14 @@ class LucidManager{
     bool acquire_data(cv::Mat &color_image, cv::Mat &ir_image, cv::Mat &depth_image, std::vector<cv::Point3f> &points);
     bool stop();
     bool reset();
+    bool get_rgb_camera_info(dr::CameraInfo& camera_info);
+    bool get_depth_camera_info(dr::CameraInfo& camera_info);
 
     dr::Lucid *CreateDevice(dr::Lucid::ColorConfig &colorConfig);
     dr::Lucid *CreateDevice(dr::Lucid::DepthConfig &depthConfig);
     dr::Lucid *GetDevice(std::string &macAddress);
     bool DestoryDevice(std::string &macAddress);
-    bool DestoryAllDevice();
+    void DestoryAllDevice();
 
   private:
     std::map<std::string, Arena::DeviceInfo> deviceList_;

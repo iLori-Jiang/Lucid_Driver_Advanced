@@ -992,7 +992,7 @@ bool Lucid::DepthToCVMat(std::vector<PointData> &data_points, int height, int wi
 			counter += 1;
 		}
 	}
-	depth_.convertTo(depth_, CV_16UC1, 255);
+	//depth_.convertTo(depth_, CV_16UC1, 255);
 	std::cout << TAB4 << "Process depth image done" << std::endl;
 	return true;
 }

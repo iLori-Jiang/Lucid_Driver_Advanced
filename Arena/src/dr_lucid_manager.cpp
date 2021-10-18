@@ -46,6 +46,7 @@ LucidManager::LucidManager()
  */
 LucidManager::~LucidManager()
 {
+  DestoryAllDevice();
   Arena::CloseSystem(pSystem_);
 }
 
@@ -219,13 +220,68 @@ bool LucidManager::stop()
 	return true;
 }
 
+/**
+ * @brief destory all the active devices for reset
+ */
 bool LucidManager::reset()
 {
-  for (auto lucid : activeDeviceList_)
-	{
-		if(!lucid->ResetCamera()) {return false;}
-	}
+  auto iter = activeDeviceList_.begin();
+  while (iter != activeDeviceList_.end())
+  {
+    if(!iter->ResetCamera()) {return false;}
+    iter = activeDeviceList_.erase(iter);
+  }
+
 	return true;
+}
+
+/**
+ * 
+ */
+bool LucidManager::get_rgb_camera_info(dr::CameraInfo& camera_info)
+{
+  camera_info.frame_id = "lucid_color_optical_frame";
+
+  camera_info.image_height = 1536;
+  camera_info.image_width = 2048;
+
+  camera_info.distortion_model = dr::distortion_models::RATIONAL_POLYNOMIAL;
+
+  /**
+  for (auto& x : rgb_coffe_.data)
+  {
+    camera_info.distortion_coefficients.push_back(x);
+  }
+  **/
+
+  camera_info.intrinsic_matrix = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+  camera_info.projection_matrix = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+  camera_info.rotation_matrix = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+
+  return true;
+}
+
+bool LucidManager::get_depth_camera_info(dr::CameraInfo& camera_info)
+{
+  camera_info.frame_id = "lucid_depth_optical_frame";
+
+  camera_info.image_height = 480;
+  camera_info.image_width = 640;
+
+  camera_info.distortion_model = dr::distortion_models::RATIONAL_POLYNOMIAL;
+  
+  /**
+  for (auto& x : dp_coffe_.data)
+  {
+    camera_info.distortion_coefficients.push_back(x);
+  }
+  **/
+
+  camera_info.intrinsic_matrix = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+  camera_info.projection_matrix = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+  camera_info.rotation_matrix = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+
+  return true;
 }
 
 /**
@@ -233,7 +289,7 @@ bool LucidManager::reset()
  */
 dr::Lucid *LucidManager::GetDevice(std::string &macAddress)
 {
-  for (uint8_t i=0; i<activeDeviceList_.size(); ++i)
+  for (int i=0; i<activeDeviceList_.size(); ++i)
   {
     if (activeDeviceList_[i]->macAddress_ == macAddress)
     {
@@ -250,7 +306,7 @@ dr::Lucid *LucidManager::GetDevice(std::string &macAddress)
  */
 bool LucidManager::DestoryDevice(std::string &macAddress)
 {
-  for (uint8_t i=0; i<activeDeviceList_.size(); ++i)
+  for (int i=0; i<activeDeviceList_.size(); ++i)
   {
     if (activeDeviceList_[i]->macAddress_ == macAddress)
     {
@@ -267,12 +323,13 @@ bool LucidManager::DestoryDevice(std::string &macAddress)
 /**
  * @brief destory all the active devices
  */
-bool LucidManager::DestoryAllDevice()
+void LucidManager::DestoryAllDevice()
 {
-  for (uint8_t i=0; i<activeDeviceList_.size(); ++i)
+  auto iter = activeDeviceList_.begin();
+  while (iter != activeDeviceList_.end())
   {
-    pSystem_->DestroyDevice(activeDeviceList_[i]->GetDevice());
+    pSystem_->DestroyDevice(iter->GetDevice());
+    iter = activeDeviceList_.erase(iter);
   }
-  return true;
 }
 } // namespace dr
