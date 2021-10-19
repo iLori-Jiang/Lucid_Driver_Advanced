@@ -257,9 +257,9 @@ bool LucidManager::get_rgb_camera_info(dr::CameraInfo& camera_info)
 
   camera_info.distortion_model = dr::distortion_models::RATIONAL_POLYNOMIAL;
 
-  for (auto& x : rgb_coffe_.data)
+  for (auto x = 0; x < 5; ++x)
   {
-    camera_info.distortion_coefficients.push_back(x);
+    camera_info.distortion_coefficients.push_back(0);
   }
 
   camera_info.intrinsic_matrix = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
@@ -278,9 +278,9 @@ bool LucidManager::get_depth_camera_info(dr::CameraInfo& camera_info)
 
   camera_info.distortion_model = dr::distortion_models::RATIONAL_POLYNOMIAL;
   
-  for (auto& x : dp_coffe_.data)
+  for (auto x = 0; x < 5; ++x)
   {
-    camera_info.distortion_coefficients.push_back(x);
+    camera_info.distortion_coefficients.push_back(0);
   }
 
   camera_info.intrinsic_matrix = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};

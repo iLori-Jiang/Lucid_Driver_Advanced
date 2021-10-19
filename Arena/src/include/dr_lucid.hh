@@ -14,7 +14,9 @@
 #include "ArenaApi.h"
 
 // include opencv
+#include <opencv2/opencv.hpp>
 #include <opencv2/core/core.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
@@ -167,12 +169,31 @@ class Lucid
       float offsetZ;
     };
 
+    struct OpticalDistortionCoefficients
+    {
+      double k1;
+      double k2;
+      double p1;
+      double p2;
+      double k3;
+
+      OpticalDistortionCoefficients()
+      {
+        k1 = 0;
+        k2 = 0;
+        p1 = 0;
+        p2 = 0;
+        k3 = 0;
+      }
+    }
+
     // camera properties
     std::string macAddress_;
     std::string deviceType_;
     std::string deviceFamily_;
     GenICam::gcstring pixelFormat_;
     std::string deviceModelName_;
+    OpticalDistortionCoefficients distortionCoef_;
 
     // output data
     cv::Mat color_;

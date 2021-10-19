@@ -26,6 +26,7 @@ Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, ColorConfig &colo
 	fetch_frame_timeout_ = colorConfig.fetch_frame_timeout;
 	save_path_ = colorConfig.save_path;
 	is_reset_ = false;
+	OpticalDistortionCoefficients distortionCoef_;
 
 	// initial camera system and device
 	pDevice_ = pDevice;
@@ -79,6 +80,7 @@ Lucid::Lucid(Arena::IDevice *pDevice, Arena::ISystem *pSystem, DepthConfig &dept
 	fetch_frame_timeout_ = depthConfig.fetch_frame_timeout;
 	save_path_ = depthConfig.save_path;
 	is_reset_ = false;
+	OpticalDistortionCoefficients distortionCoef_;
 
 	// initial camera system and device
 	pDevice_ = pDevice;
