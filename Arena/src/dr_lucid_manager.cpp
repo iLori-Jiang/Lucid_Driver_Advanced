@@ -200,6 +200,7 @@ bool LucidManager::start()
 		  if(!lucid->GetImage()){return false;}
       if(!lucid->RequeueBuffer()){return false;}
     }
+    std::cout << "\n";
 	}
 	return true;
 }
@@ -337,5 +338,6 @@ void LucidManager::DestoryAllDevice()
     pSystem_->DestroyDevice((*iter)->GetDevice());
     iter = activeDeviceList_.erase(iter);
   }
+  std::cout << "Destroy all active devices complete." << std::endl;
 }
 } // namespace dr

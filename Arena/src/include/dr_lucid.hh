@@ -216,10 +216,10 @@ class Lucid
     bool save_flag_;
 
     // images information
-    int counter_;
-    Arena::IImage *pImage_;
-    std::vector<PointData> data_points_;
-    std::vector<uint16_t> z_list_;
+    int counter_;                         // for counting number of images
+    Arena::IImage *pImage_;               // original format of image
+    std::vector<PointData> data_points_;  // for point cloud
+    std::vector<double> z_list_;          // for depth image
 
     // camera configuration
     void ConfigureHLTCamera();

@@ -901,7 +901,7 @@ bool Lucid::ProcessDepthImage(Arena::IImage *pImage)
 	// initial vector
 	std::vector<PointData> data_points;
 	std::vector<cv::Point3f> cv_points;
-	std::vector<uint16_t> z_list;
+	std::vector<double> z_list;
 
 	// prepare info from input buffer
 	size_t width = pImage->GetWidth();
@@ -911,6 +911,12 @@ bool Lucid::ProcessDepthImage(Arena::IImage *pImage)
 	size_t srcPixelSize = srcBpp / 8;
 	const uint8_t* pInput = pImage->GetData();
 	const uint8_t* pIn = pInput;
+
+	// prepare distance data
+	const double z_min = depthConfig_.detect_distance_min;
+	const double z_max = z_min + depthConfig_.detect_range;
+	const double gray_min = 0;
+	const double gray_max = 255;
 
 	// traverse the points
 	for (size_t i = 0; i < size; i++)
@@ -945,7 +951,9 @@ bool Lucid::ProcessDepthImage(Arena::IImage *pImage)
 
 		data_points.push_back(point);
 		cv_points.push_back(cv::Point3f(xSigned, ySigned, zSigned));
-		z_list.push_back(z);
+
+		// map z distance value to color range 16 bits
+		z_list.push_back((gray_max - gray_min) / (z_max - z_min) * (zSigned - z_min));
 
 		// loop increment
 		pIn += srcPixelSize;
@@ -987,12 +995,10 @@ bool Lucid::DepthToCVMat(std::vector<PointData> &data_points, int height, int wi
 		{	
 			// assign intensity information
 			pointer_gray[j] = data_points[counter].intensity * 255 / 65535;
-			// pointer_depth[j] = z_list_[counter];
-			pointer_depth[j] = data_points[counter].z;
+			pointer_depth[j] = z_list_[counter];
 			counter += 1;
 		}
 	}
-	//depth_.convertTo(depth_, CV_16UC1, 255);
 	std::cout << TAB4 << "Process depth image done" << std::endl;
 	return true;
 }

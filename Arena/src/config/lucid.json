@@ -3,7 +3,7 @@
     "fps": 5,
     "trigger_mode": true,
     "fetch_frame_timeout": 2000,
-    "save_path": ""
+    "save_path": "/home/bot/JHY/Captured_Images/"
   },
   "cameras": {
     "camera_1": {
