@@ -3,12 +3,12 @@
     "fps": 5,
     "trigger_mode": true,
     "fetch_frame_timeout": 2000,
-    "save_path": "/home/bot/Captured_Images/"
+    "save_path": ""
   },
   "cameras": {
     "camera_1": {
       "type": "color",
-      "mac": "1c:0f:af:0c:85:61",
+      "mac": "1c:0f:af:00:32:32",
       "resolution": 1280,
       "pixel_format": "rgb",
       "exposure_auto": true,
@@ -25,10 +25,10 @@
       "mac": "1c:0f:af:00:46:6f",
       "resolution": 640,
       "pixel_format": "cloud",
-      "exposure_time": 250,
+      "exposure_time": 1000,
       "detect_range": 3000,
       "detect_distance_min": 1000,
-      "amplitude_gain": 10,
+      "amplitude_gain": 20,
       "confidence_threshold_enable": true,
       "confidence_threshold_min": 500,
       "image_accumulation": 4,

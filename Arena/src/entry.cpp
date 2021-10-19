@@ -7,7 +7,7 @@ int main()
   try
   {
     dr::LucidManager *lucidManager = new dr::LucidManager();
-		std::string config_file_path = "/home/bot/JHY/lucid_test_WS/ArenaSDK_v0.1.54_Linux_x64/ArenaSDK_TEST/Examples/Arena/src/config/helios.json";
+		std::string config_file_path = "/home/bot/JHY/lucid_test_WS/ArenaSDK_v0.1.54_Linux_x64/ArenaSDK_TEST/Examples/Arena/src/config/lucid.json";
 		if(lucidManager->init(config_file_path))
 		{
 			lucidManager->start();

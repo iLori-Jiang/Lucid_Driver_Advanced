@@ -128,11 +128,16 @@ bool LucidManager::init(const std::string &config_file_path)
         colorConfig.reverse_x = camera.at("reverse_x");
         colorConfig.reverse_y = camera.at("reverse_y");
 
+        dr::Lucid *color = CreateDevice(colorConfig);
+        if (color != NULL) {activeDeviceList_.push_back(color);}
+        else 
+        {
+          //DRL_ERROR_STREAM("Invalid mac for Lucid!!!! Please check config file.");
+          return false;
+        }
+
         if (camera.at("pixel_format") == "rgb") {color_enable_ = true;}
         else if (camera.at("pixel_format") == "gray") {gray_enable_ = true;}
-
-        dr::Lucid *color = CreateDevice(colorConfig);
-        activeDeviceList_.push_back(color);
       }
       else if (camera.at("type") == "depth")
       {
@@ -156,12 +161,18 @@ bool LucidManager::init(const std::string &config_file_path)
         depthConfig.flying_pixels_distance_min = camera.at("flying_pixels_distance_min");
         depthConfig.spatial_filter_enable = camera.at("spatial_filter_enable");
 
+        dr::Lucid *depth = CreateDevice(depthConfig);
+        if (depth != NULL) {activeDeviceList_.push_back(depth);}
+        else 
+        {
+          //DRL_ERROR_STREAM("Invalid mac for Lucid!!!! Please check config file.");
+          return false;
+        }
+
         if (camera.at("pixel_format") == "cloud") {depth_enable_ = true; gray_enable_ = true;}
         else if (camera.at("pixel_format") == "gray") {gray_enable_ = true;}
-
-        dr::Lucid *depth = CreateDevice(depthConfig);
-        activeDeviceList_.push_back(depth);
-      }else
+      }
+      else
       {
         //DRL_ERROR_STREAM("Invalid configuration for Lucid!!!! Please check sample config file.");
         return false;
