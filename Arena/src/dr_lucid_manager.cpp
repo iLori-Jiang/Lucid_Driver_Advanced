@@ -107,6 +107,19 @@ bool LucidManager::init(const std::string &config_file_path)
     nlohmann::json json_config;
     conf_stream >> json_config;
 
+    std::string overlay_config = json_config.at("common").at("overlay_config");
+    if (overlay_config != "" || overlay_config != " " || overlay_config != "   ")
+    {
+      cv::FileStorage fs(overlay_config, cv::FileStorage::READ);
+      fs["cameraMatrix"] >> cameraMatrix_;
+      fs["distCoeffs"] >> distCoeffs_;
+      fs["rotationVector"] >> rotationVector_;
+      fs["translationVector"] >> translationVector_;
+      fs.release();
+      overlay_enable_ = true;
+    }
+    else {overlay_enable_ = false;}
+
     for (auto camera : json_config.at("cameras"))
     {
       if (camera.at("type") == "color")
@@ -205,7 +218,7 @@ bool LucidManager::start()
 	return true;
 }
 
-bool LucidManager::acquire_data(cv::Mat &color_image, cv::Mat &ir_image, cv::Mat &depth_image, std::vector<cv::Point3f> &points)
+bool LucidManager::acquire_data(cv::Mat &color_image, cv::Mat &ir_image, cv::Mat &depth_image, pcl::PointCloud<pcl::PointXYZ> &ptcloud, cv::Mat &xyz_image)
 {
   for (auto lucid : activeDeviceList_)
 	{
@@ -215,7 +228,8 @@ bool LucidManager::acquire_data(cv::Mat &color_image, cv::Mat &ir_image, cv::Mat
 
 		if (lucid->pixelFormat_ == COLOR_PIXEL_FORMAT) {color_image = lucid->color_;}
 		else if (lucid->pixelFormat_ == INTENSITY_PIXEL_FORMAT) {ir_image = lucid->gray_;}
-		else if (lucid->pixelFormat_ == DEPTH_PIXEL_FORMAT) {ir_image = lucid->gray_; points = lucid->cvpoints_; depth_image = lucid->depth_;}
+		else if (lucid->pixelFormat_ == DEPTH_PIXEL_FORMAT) 
+    {ir_image = lucid->gray_; ptcloud = lucid->ptcloud_; depth_image = lucid->depth_; xyz_image = lucid->xyz_;}
 		else {return false;}
 
 		if(!lucid->RequeueBuffer()){return false;}
@@ -290,6 +304,59 @@ bool LucidManager::get_depth_camera_info(dr::CameraInfo& camera_info)
   return true;
 }
 **/
+
+bool LucidManager::overlay_color_depth(cv::Mat &color_image, cv::Mat &xyz_image, pcl::PointCloud<pcl::PointXYZRGB> &color_ptcloud)
+{
+  if (!overlay_enable_) {return false;}
+
+  // reshape image matrix
+  int size = xyz_image.rows * xyz_image.cols;
+  cv::Mat xyz_points = xyz_image.reshape(3, size);
+  
+  // project points
+  cv::Mat projected_points;
+  cv::projectPoints(
+    xyz_points,
+    rotationVector_,
+    translationVector_,
+    cameraMatrix_,
+    distCoeffs_,
+    projected_points
+  );
+
+  // loop through projected points to access RGB data at those points
+  for (int i = 0; i < width * height; i++)
+  {
+    unsigned int col = (unsigned int)std::round(projected_points.at<cv::Vec2f>(i)[0]);
+    unsigned int row = (unsigned int)std::round(projected_points.at<cv::Vec2f>(i)[1]);
+
+    // only handle appropriate points
+    if (ros < 0 || col < 0 ||
+			row >= static_cast<unsigned int>(color_image.rows) ||
+			col >= static_cast<unsigned int>(color_image.cols))
+			continue;
+
+    // access corresponding XYZ and RGB data
+    uchar R = color_image.at<cv::Vec3b>(row, col)[0];
+    uchar G = color_image.at<cv::Vec3b>(row, col)[1];
+    uchar B = color_image.at<cv::Vec3b>(row, col)[2];
+
+    float X = xyz_image.at<cv::Vec3f>(i)[0];
+    float Y = xyz_image.at<cv::Vec3f>(i)[1];
+    float Z = xyz_image.at<cv::Vec3f>(i)[2];
+
+    pcl::PointXYZRGB pt;
+		pt.x = X;
+		pt.y = Y;
+		pt.z = Z;
+    pt.r = R;
+    pt.g = G;
+    pt.b = B;
+    color_ptcloud.points.push_back(pt);
+  }
+
+  return true;
+}
 
 /**
  * @brief get the certain device based on its mac address

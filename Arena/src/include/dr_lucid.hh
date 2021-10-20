@@ -199,7 +199,7 @@ class Lucid
     cv::Mat color_;
     cv::Mat gray_;
     cv::Mat depth_;
-    std::vector<cv::Point3f> cvpoints_;
+    cv::Mat xyz_;
     pcl::PointCloud<pcl::PointXYZ> ptcloud_;
 
     // constructor and deconstructor

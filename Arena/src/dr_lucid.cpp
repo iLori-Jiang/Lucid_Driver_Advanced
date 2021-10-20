@@ -8,7 +8,7 @@ namespace dr
 #define TAB4 "            "
 
 // pixel format
-#define COLOR_PIXEL_FORMAT "BGR8"
+#define COLOR_PIXEL_FORMAT "RGB8"
 #define DEPTH_PIXEL_FORMAT "Coord3D_ABCY16"
 #define INTENSITY_PIXEL_FORMAT "Mono8"
 
@@ -902,7 +902,6 @@ bool Lucid::ProcessDepthImage(Arena::IImage *pImage)
 
 	// initial vector
 	std::vector<PointData> data_points;
-	std::vector<cv::Point3f> cv_points;
 	std::vector<double> z_list;
 
 	// prepare info from input buffer
@@ -952,7 +951,6 @@ bool Lucid::ProcessDepthImage(Arena::IImage *pImage)
 		};
 
 		data_points.push_back(point);
-		cv_points.push_back(cv::Point3f(xSigned, ySigned, zSigned));
 
 		// map z distance value to color range 16 bits
 		z_list.push_back((gray_max - gray_min) / (z_max - z_min) * (zSigned - z_min));
@@ -963,7 +961,6 @@ bool Lucid::ProcessDepthImage(Arena::IImage *pImage)
 
 	z_list_ = z_list;
 	data_points_ = data_points;
-	cvpoints_ = cv_points;
 	std::cout << TAB4 << "Process finished" << std::endl;
 
 	return true;
@@ -984,6 +981,7 @@ bool Lucid::DepthToCVMat(std::vector<PointData> &data_points, int height, int wi
 	// initial cv::Mat
 	gray_ = cv::Mat(height, width, CV_8UC1, cv::Scalar::all(0));
 	depth_ = cv::Mat(height, width, CV_8UC1, cv::Scalar::all(0));
+	xyz_ = cv::Mat(height, width, CV_32FC3);
 
 	// traverse
 	uchar *pointer_gray;					// tool for cv::Mat traverse
@@ -995,9 +993,15 @@ bool Lucid::DepthToCVMat(std::vector<PointData> &data_points, int height, int wi
 		pointer_depth = depth_.ptr(i);
 		for (int j=0; j<width; ++j)
 		{	
-			// assign intensity information
+			// assign intensity and z distance information
 			pointer_gray[j] = data_points[counter].intensity * 255 / 65535;
 			pointer_depth[j] = z_list_[counter];
+
+			// assign xyz distance information
+			xyz_.at<cv::Vec3f>(i, j)[0] = data_points[counter].x;
+			xyz_.at<cv::Vec3f>(i, j)[1] = data_points[counter].y;
+			xyz_.at<cv::Vec3f>(i, j)[2] = data_points[counter].z;
+
 			counter += 1;
 		}
 	}
