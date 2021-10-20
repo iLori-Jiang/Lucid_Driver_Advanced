@@ -5,7 +5,7 @@
 
 namespace dr
 {
-#define COLOR_PIXEL_FORMAT "BGR8"
+#define COLOR_PIXEL_FORMAT "RGB8"
 #define DEPTH_PIXEL_FORMAT "Coord3D_ABCY16"
 #define INTENSITY_PIXEL_FORMAT "Mono8"
 
