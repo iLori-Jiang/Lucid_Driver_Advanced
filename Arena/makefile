@@ -38,6 +38,7 @@ SUBDIRS =   Cpp_Acquisition                           \
             Cpp_Trigger_OverlappingTrigger            \
             Cpp_UserSets                              \
             IpConfigUtility                           \
+            Cpp_HLTRGB_Test                           \
             src
 
 
