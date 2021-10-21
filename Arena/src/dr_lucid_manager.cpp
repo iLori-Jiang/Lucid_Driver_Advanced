@@ -371,36 +371,36 @@ bool LucidManager::overlay_color_depth(cv::Mat &color_image, cv::Mat &xyz_image,
   if (!overlay_enable_) {return false;}
 
   // reshape image matrix
-  const int size = xyz_image.rows * xyz_image.cols;
-  cv::Mat xyz_points = xyz_image.reshape(3, size);
+  const int xyz_size = xyz_image.rows * xyz_image.cols;
+  cv::Mat xyz_points = xyz_image.reshape(3, xyz_size);
   
   // project points
-  cv::Mat projected_points;
+  cv::Mat color_projected_points;
   cv::projectPoints(
     xyz_points,
     rotationVector_,
     translationVector_,
     cameraMatrix_,
     distCoeffs_,
-    projected_points
+    color_projected_points
   );
 
   // loop through projected points to access RGB data at those points
-  for (int i = 0; i < size; i++)
+  for (int i = 0; i < xyz_size; i++)
   {
-    unsigned int col = (unsigned int)std::round(projected_points.at<cv::Vec2f>(i)[0]);
-    unsigned int row = (unsigned int)std::round(projected_points.at<cv::Vec2f>(i)[1]);
+    unsigned int color_col = (unsigned int)std::round(color_projected_points.at<cv::Vec2f>(i)[0]);
+    unsigned int color_row = (unsigned int)std::round(color_projected_points.at<cv::Vec2f>(i)[1]);
 
     // only handle appropriate points
-    if (row < 0 || col < 0 ||
-			row >= static_cast<unsigned int>(color_image.rows) ||
-			col >= static_cast<unsigned int>(color_image.cols))
+    if (color_row < 0 || color_col < 0 ||
+			color_row >= static_cast<unsigned int>(color_image.rows) ||
+			color_col >= static_cast<unsigned int>(color_image.cols))
 			continue;
 
     // access corresponding XYZ and RGB data
-    uchar R = color_image.at<cv::Vec3b>(row, col)[0];
-    uchar G = color_image.at<cv::Vec3b>(row, col)[1];
-    uchar B = color_image.at<cv::Vec3b>(row, col)[2];
+    uchar R = color_image.at<cv::Vec3b>(color_row, color_col)[0];
+    uchar G = color_image.at<cv::Vec3b>(color_row, color_col)[1];
+    uchar B = color_image.at<cv::Vec3b>(color_row, color_col)[2];
 
     float X = xyz_image.at<cv::Vec3f>(i)[0];
     float Y = xyz_image.at<cv::Vec3f>(i)[1];

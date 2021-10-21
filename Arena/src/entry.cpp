@@ -12,8 +12,8 @@ int main()
 		{
 			lucidManager->start();
 
-			while (true)
-			{
+			// while (true)
+			// {
 				std::cout << "\nPress enter to get next image\n";
 				std::getchar();
 
@@ -43,8 +43,11 @@ int main()
 						cv::imshow("depth", depth_image);
 						cv::waitKey(-1);
 						cv::destroyAllWindows();
+						cv::imshow("xyz", xyz_image);
+						cv::waitKey(-1);
+						cv::destroyAllWindows();
 					}
-				}
+				// }
 
 				pcl::PointCloud<pcl::PointXYZRGB> color_ptcloud;
 				lucidManager->overlay_color_depth(color_image, xyz_image, color_ptcloud);

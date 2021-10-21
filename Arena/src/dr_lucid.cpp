@@ -981,7 +981,7 @@ bool Lucid::DepthToCVMat(std::vector<PointData> &data_points, int height, int wi
 	// initial cv::Mat
 	gray_ = cv::Mat(height, width, CV_8UC1, cv::Scalar::all(0));
 	depth_ = cv::Mat(height, width, CV_8UC1, cv::Scalar::all(0));
-	xyz_ = cv::Mat(height, width, CV_32FC3);
+	xyz_ = cv::Mat(height, width, CV_32FC3, cv::Scalar::all(0));
 
 	// traverse
 	uchar *pointer_gray;					// tool for cv::Mat traverse
@@ -998,9 +998,9 @@ bool Lucid::DepthToCVMat(std::vector<PointData> &data_points, int height, int wi
 			pointer_depth[j] = z_list_[counter];
 
 			// assign xyz distance information
-			xyz_.at<cv::Vec3f>(i, j)[0] = data_points[counter].x;
-			xyz_.at<cv::Vec3f>(i, j)[1] = data_points[counter].y;
-			xyz_.at<cv::Vec3f>(i, j)[2] = data_points[counter].z;
+			xyz_.at<cv::Vec3f>(i,j)[0] = (float)data_points[counter].x;
+			xyz_.at<cv::Vec3f>(i,j)[1] = (float)data_points[counter].y;
+			xyz_.at<cv::Vec3f>(i,j)[2] = (float)data_points[counter].z;
 
 			counter += 1;
 		}
