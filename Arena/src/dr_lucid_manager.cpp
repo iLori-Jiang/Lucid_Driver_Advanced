@@ -29,6 +29,7 @@ LucidManager::LucidManager()
       deviceList_.insert(std::pair<std::string, Arena::DeviceInfo>(macAddress, device));
     }
 	}
+
 	if (deviceList_.empty())
 	{
     // EXCEPTION
@@ -39,6 +40,7 @@ LucidManager::LucidManager()
   color_enable_ = false;
   depth_enable_ = false;
   gray_enable_ = false;
+  overlay_enable_ = false;
 }
 
 /**
@@ -95,31 +97,76 @@ dr::Lucid *LucidManager::CreateDevice(dr::Lucid::DepthConfig &depthConfig)
 }
 
 /**
- * @warning
+ * @brief init the cameras based on the config
+ * @warning config file should not miss anything
  */
 bool LucidManager::init(const std::string &config_file_path)
 {
+  // initial
   std::vector<dr::Lucid *> activeDeviceList_;
+  cameraMatrix_ = cv::Mat(3, 3, CV_64F);
+  distCoeffs_ = cv::Mat(8, 1, CV_64F);
+  rotationVector_ = cv::Mat(3, 1, CV_64F);
+  translationVector_ = cv::Mat(3, 1, CV_64F);
 
   try
   {
+    // load json file
     std::ifstream conf_stream(config_file_path.c_str());
     nlohmann::json json_config;
     conf_stream >> json_config;
 
+    // load color depth overlap config
     std::string overlay_config = json_config.at("common").at("overlay_config");
-    if (overlay_config != "" || overlay_config != " " || overlay_config != "   ")
+    if (overlay_config != "" && overlay_config != " " && overlay_config != "   ")
     {
       cv::FileStorage fs(overlay_config, cv::FileStorage::READ);
-      fs["cameraMatrix"] >> cameraMatrix_;
-      fs["distCoeffs"] >> distCoeffs_;
-      fs["rotationVector"] >> rotationVector_;
-      fs["translationVector"] >> translationVector_;
+      cv::FileNode fn = fs["cameraMatrix"];
+      int counter = 0;
+      for (int i=0; i<cameraMatrix_.rows; i++)
+      {
+        for (int j=0; j<cameraMatrix_.cols; j++)
+        {
+          cameraMatrix_.at<double>(i,j) = fn[counter];
+          counter ++;
+        }
+      }
+      fn = fs["distCoeffs"];
+      counter = 0;
+      for (int i=0; i<distCoeffs_.rows; i++)
+      {
+        for (int j=0; j<distCoeffs_.cols; j++)
+        {
+          distCoeffs_.at<double>(i,j) = fn[counter];
+          counter ++;
+        }
+      }
+      fn = fs["rotationVector"];
+      counter = 0;
+      for (int i=0; i<rotationVector_.rows; i++)
+      {
+        for (int j=0; j<rotationVector_.cols; j++)
+        {
+          rotationVector_.at<double>(i,j) = fn[counter];
+          counter ++;
+        }
+      }
+      fn = fs["translationVector"];
+      counter = 0;
+      for (int i=0; i<translationVector_.rows; i++)
+      {
+        for (int j=0; j<translationVector_.cols; j++)
+        {
+          translationVector_.at<double>(i,j) = fn[counter];
+          counter ++;
+        }
+      }
       fs.release();
       overlay_enable_ = true;
+      std::cout << "Load overlay config success." << std::endl;
     }
-    else {overlay_enable_ = false;}
 
+    // assign each camera config
     for (auto camera : json_config.at("cameras"))
     {
       if (camera.at("type") == "color")
@@ -200,6 +247,9 @@ bool LucidManager::init(const std::string &config_file_path)
   return true;
 };
 
+/**
+ * @brief start the cameras so that they can take pictures
+ */
 bool LucidManager::start()
 {
   for (auto lucid : activeDeviceList_)
@@ -207,6 +257,7 @@ bool LucidManager::start()
 		if(!lucid->ConfigureCamera()) {return false;}
 		if(!lucid->StartStream()) {return false;}
 
+    // take five images to adjust auto parameters inside the camera
     for (int i=0; i<5; ++i)
     {
       if(!lucid->TriggerArming()){return false;}
@@ -218,6 +269,10 @@ bool LucidManager::start()
 	return true;
 }
 
+/**
+ * @brief let the cameras to take pictures and process them to cv::Mat and pcl::PointCloud format
+ * @note ptcloud and xyz_image are same things in different format
+ */
 bool LucidManager::acquire_data(cv::Mat &color_image, cv::Mat &ir_image, cv::Mat &depth_image, pcl::PointCloud<pcl::PointXYZ> &ptcloud, cv::Mat &xyz_image)
 {
   for (auto lucid : activeDeviceList_)
@@ -237,6 +292,9 @@ bool LucidManager::acquire_data(cv::Mat &color_image, cv::Mat &ir_image, cv::Mat
   return true;
 }
 
+/**
+ * @brief after the cameras finish their jobs, stop the cameras
+ */
 bool LucidManager::stop()
 {
   for (auto lucid : activeDeviceList_) 
@@ -305,12 +363,15 @@ bool LucidManager::get_depth_camera_info(dr::CameraInfo& camera_info)
 }
 **/
 
+/**
+ * @brief overlay color and xyz inforamtion together
+ */
 bool LucidManager::overlay_color_depth(cv::Mat &color_image, cv::Mat &xyz_image, pcl::PointCloud<pcl::PointXYZRGB> &color_ptcloud)
 {
   if (!overlay_enable_) {return false;}
 
   // reshape image matrix
-  int size = xyz_image.rows * xyz_image.cols;
+  const int size = xyz_image.rows * xyz_image.cols;
   cv::Mat xyz_points = xyz_image.reshape(3, size);
   
   // project points
@@ -325,13 +386,13 @@ bool LucidManager::overlay_color_depth(cv::Mat &color_image, cv::Mat &xyz_image,
   );
 
   // loop through projected points to access RGB data at those points
-  for (int i = 0; i < width * height; i++)
+  for (int i = 0; i < size; i++)
   {
     unsigned int col = (unsigned int)std::round(projected_points.at<cv::Vec2f>(i)[0]);
     unsigned int row = (unsigned int)std::round(projected_points.at<cv::Vec2f>(i)[1]);
 
     // only handle appropriate points
-    if (ros < 0 || col < 0 ||
+    if (row < 0 || col < 0 ||
 			row >= static_cast<unsigned int>(color_image.rows) ||
 			col >= static_cast<unsigned int>(color_image.cols))
 			continue;
@@ -355,6 +416,9 @@ bool LucidManager::overlay_color_depth(cv::Mat &color_image, cv::Mat &xyz_image,
     color_ptcloud.points.push_back(pt);
   }
 
+  color_ptcloud.height = 1;
+  color_ptcloud.width = color_ptcloud.points.size();
+  std::cout << "Overlay complete." << std::endl;
   return true;
 }
 

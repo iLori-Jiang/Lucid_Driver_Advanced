@@ -7,7 +7,7 @@ int main()
   try
   {
     dr::LucidManager *lucidManager = new dr::LucidManager();
-		std::string config_file_path = "/home/bot/JHY/lucid_test_WS/ArenaSDK_v0.1.54_Linux_x64/ArenaSDK_TEST/Examples/Arena/src/config/helios.json";
+		std::string config_file_path = "/home/bot/JHY/lucid_test_WS/ArenaSDK_v0.1.54_Linux_x64/ArenaSDK_TEST/Examples/Arena/src/config/lucid.json";
 		if(lucidManager->init(config_file_path))
 		{
 			lucidManager->start();
@@ -20,8 +20,9 @@ int main()
 				cv::Mat color_image;
 				cv::Mat ir_image;
 				cv::Mat depth_image;
-				std::vector<cv::Point3f> points;
-				if (lucidManager->acquire_data(color_image, ir_image, depth_image, points))
+				pcl::PointCloud<pcl::PointXYZ> ptcloud;
+				cv::Mat xyz_image;
+				if (lucidManager->acquire_data(color_image, ir_image, depth_image, ptcloud, xyz_image))
 				{
 					if (lucidManager->color_enable_)
 					{
@@ -44,6 +45,10 @@ int main()
 						cv::destroyAllWindows();
 					}
 				}
+
+				pcl::PointCloud<pcl::PointXYZRGB> color_ptcloud;
+				lucidManager->overlay_color_depth(color_image, xyz_image, color_ptcloud);
+				pcl::io::savePCDFileASCII("/home/bot/JHY/Captured_Images/color_ptcloud_1.pcd", color_ptcloud);
 			}
 
 			lucidManager->stop();

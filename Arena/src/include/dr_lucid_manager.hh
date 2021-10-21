@@ -10,10 +10,13 @@ namespace dr
  */
 class LucidManager{
   public:
+    // if the active cameras has certain ability
     bool color_enable_;
     bool depth_enable_;
     bool gray_enable_;
     bool overlay_enable_;
+
+    // overlap config, first two are for color camera, last two are the position relationship between color and depth
     cv::Mat cameraMatrix_;
 	  cv::Mat distCoeffs_;
 	  cv::Mat rotationVector_;
@@ -32,6 +35,7 @@ class LucidManager{
     // bool get_depth_camera_info(dr::CameraInfo& camera_info);
     bool overlay_color_depth(cv::Mat &color_image, cv::Mat &xyz_image, pcl::PointCloud<pcl::PointXYZRGB> &color_ptcloud);
 
+    // common functions
     dr::Lucid *CreateDevice(dr::Lucid::ColorConfig &colorConfig);
     dr::Lucid *CreateDevice(dr::Lucid::DepthConfig &depthConfig);
     dr::Lucid *GetDevice(std::string &macAddress);

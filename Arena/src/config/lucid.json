@@ -3,7 +3,8 @@
     "fps": 5,
     "trigger_mode": true,
     "fetch_frame_timeout": 2000,
-    "save_path": "/home/bot/JHY/Captured_Images/"
+    "overlay_config": "/home/bot/JHY/Captured_Images/212600162.json",
+    "save_path": ""
   },
   "cameras": {
     "camera_1": {

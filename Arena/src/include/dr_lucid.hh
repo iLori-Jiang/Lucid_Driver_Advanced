@@ -185,7 +185,7 @@ class Lucid
         p2 = 0;
         k3 = 0;
       }
-    }
+    };
 
     // camera properties
     std::string macAddress_;
