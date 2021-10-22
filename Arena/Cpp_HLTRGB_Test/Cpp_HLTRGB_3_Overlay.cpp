@@ -38,6 +38,10 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
+// include pcl
+#include "pcl/io/pcd_io.h"
+#include "pcl/point_types.h"
+
 // Helios RGB: Overlay
 // This example demonstrates color overlay over 3D image, part 3 - Overlay:
 //		With the system calibrated, we can now remove the calibration target from the scene and grab new images with the Helios and Triton cameras, 
@@ -52,7 +56,7 @@
 // =-=-=-=-=-=-=-=-=-
 
 // image timeout
-#define TIMEOUT 200
+#define TIMEOUT 20000
 
 // orientation values file name
 #define FILE_NAME_IN "/home/bot/JHY/Captured_Images/212600162.json"
@@ -79,7 +83,7 @@ void getImageHLT(Arena::IDevice* pHeliosDevice, Arena::IImage** ppOutImage, cv::
 	z_offset_mm = Arena::GetNodeValue<double>(node_map, "Scan3dCoordinateOffset");
 
 	pHeliosDevice->StartStream();
-	Arena::IImage* pHeliosImage = pHeliosDevice->GetImage(2000);
+	Arena::IImage* pHeliosImage = pHeliosDevice->GetImage(TIMEOUT);
 
 	// copy image because original will be delited after function call
 	Arena::IImage* pCopyImage = Arena::ImageFactory::Copy(pHeliosImage);
@@ -118,7 +122,7 @@ void getImageTRI(Arena::IDevice* pDeviceTriton, Arena::IImage** ppOutImage, cv::
 	Arena::SetNodeValue<GenICam::gcstring>(pDeviceTriton->GetNodeMap(), "PixelFormat", "RGB8");
 
 	pDeviceTriton->StartStream();
-	Arena::IImage* pImage = pDeviceTriton->GetImage(2000);
+	Arena::IImage* pImage = pDeviceTriton->GetImage(TIMEOUT);
 
 	// copy image because original will be delited after function call
 	Arena::IImage* pCopyImage = Arena::ImageFactory::Copy(pImage);
@@ -254,6 +258,8 @@ void OverlayColorOnto3DAndSave(Arena::IDevice* pDeviceTRI, Arena::IDevice* pDevi
 	std::cout << TAB2 << "Get values at projected points\n";
 
 	uint8_t* pColorData = new uint8_t[width * height * 3];
+	// TEST
+	pcl::PointCloud<pcl::PointXYZRGB> ptcloud;
 
 	for (int i = 0; i < width * height; i++)
 	{
@@ -280,7 +286,22 @@ void OverlayColorOnto3DAndSave(Arena::IDevice* pDeviceTRI, Arena::IDevice* pDevi
 		pColorData[i * 3 + 0] = B;
 		pColorData[i * 3 + 1] = G;
 		pColorData[i * 3 + 2] = R;
+
+		// TEST
+		pcl::PointXYZRGB point;
+		point.x = X;
+		point.y = Y;
+		point.z = Z;
+		point.r = R;
+		point.g = G;
+		point.b = B;
+		ptcloud.points.push_back(point);
 	}
+
+	// TEST
+	ptcloud.height = 1;
+	ptcloud.width = ptcloud.points.size();
+	pcl::io::savePCDFileASCII("/home/bot/JHY/Captured_Images/color_ptcloud_2.pcd", ptcloud);
 
 	// Save result
 	std::cout << TAB1 << "Save image to " << FILE_NAME_OUT << "\n";

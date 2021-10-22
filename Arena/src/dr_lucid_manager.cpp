@@ -398,9 +398,9 @@ bool LucidManager::overlay_color_depth(cv::Mat &color_image, cv::Mat &xyz_image,
 			continue;
 
     // access corresponding XYZ and RGB data
-    uchar R = color_image.at<cv::Vec3b>(color_row, color_col)[0];
+    uchar B = color_image.at<cv::Vec3b>(color_row, color_col)[0];
     uchar G = color_image.at<cv::Vec3b>(color_row, color_col)[1];
-    uchar B = color_image.at<cv::Vec3b>(color_row, color_col)[2];
+    uchar R = color_image.at<cv::Vec3b>(color_row, color_col)[2];
 
     float X = xyz_image.at<cv::Vec3f>(i)[0];
     float Y = xyz_image.at<cv::Vec3f>(i)[1];

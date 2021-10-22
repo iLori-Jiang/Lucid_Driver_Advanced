@@ -51,7 +51,7 @@ int main()
 
 				pcl::PointCloud<pcl::PointXYZRGB> color_ptcloud;
 				lucidManager->overlay_color_depth(color_image, xyz_image, color_ptcloud);
-				pcl::io::savePCDFileASCII("/home/bot/JHY/Captured_Images/color_ptcloud_1.pcd", color_ptcloud);
+				pcl::io::savePCDFileASCII("/home/bot/JHY/Captured_Images/color_ptcloud_2.pcd", color_ptcloud);
 			}
 
 			lucidManager->stop();

@@ -647,22 +647,10 @@ void Lucid::ConfigureTRICamera()
 	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "ReverseY", colorConfig_.reverse_y);
 
 	// Set resolution
-	if (colorConfig_.resolution == 1280)
-	{
-		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Width", 1280);
-		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Height", 960);
-		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetX", 384);		// (2048-1280)/2
-		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetY", 288);		// (1536-960)/2
-	}else if (colorConfig_.resolution == 640)
-	{
-		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Width", 640);
-		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Height", 480);
-		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetX", 704);		// (2048-640)/2
-		Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetY", 528);		// (1536-480)/2
-	}else{
-		// EXCEPTION
-		return;
-	}
+	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Width", 2048);
+	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Height", 1536);
+	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetX", 0);
+	Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetY", 0);
 
 	// Set frame rate
 	Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "AcquisitionFrameRateEnable", true);
@@ -1095,11 +1083,12 @@ bool Lucid::ProcessImage()
 		std::string pcd_filename = filename + ".pcd";
 		std::string intensity_filename = filename + "_gray.png";
 		std::string depth_filename = filename + "_depth.png";
+		std::string xyz_filename = filename + "_xyz.png";
 
 		if(!DepthToPcd(data_points_)){return false;}
 		if(!DepthToCVMat(data_points_, (int)pImage_->GetHeight(), (int)pImage_->GetWidth())){return false;}
 		
-		if(save_flag_){SavePcd(ptcloud_, pcd_filename); SaveCVMat(gray_, intensity_filename); SaveCVMat(depth_, depth_filename);}
+		if(save_flag_){SavePcd(ptcloud_, pcd_filename); SaveCVMat(gray_, intensity_filename); SaveCVMat(depth_, depth_filename); SaveCVMat(xyz_, xyz_filename);}
 		// SaveDepthImage(pImage_, filename.c_str());
 		// std::cout << TAB2 << "save " << filename << "\n";
 	}
